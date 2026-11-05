@@ -1,0 +1,15 @@
+# Self-hosted LiveKit. Used when you leave LiveKit Cloud.
+# Replace the key pair below, then set the same values in .env.local (LIVEKIT_API_KEY / LIVEKIT_API_SECRET).
+port: 7880
+rtc:
+  tcp_port: 7881
+  udp_port: 7882        # one UDP port keeps the firewall simple
+  use_external_ip: true
+keys:
+  REPLACE_KEY: REPLACE_WITH_LONG_RANDOM_SECRET
+# Built-in TURN helps users on strict mobile networks. Needs a domain and TLS certificate.
+# turn:
+#   enabled: true
+#   domain: live.yourdomain.com
+#   tls_port: 5349
+#   udp_port: 3478

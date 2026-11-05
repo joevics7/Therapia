@@ -1,0 +1,12 @@
+# Self-hosted LiveKit. Put a TLS reverse proxy (Caddy or Nginx) in front of port 7880 to get wss://
+services:
+  livekit:
+    image: livekit/livekit-server:latest
+    command: --config /etc/livekit.yaml
+    restart: unless-stopped
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "7882:7882/udp"
+    volumes:
+      - ./infra/livekit.yaml:/etc/livekit.yaml:ro
