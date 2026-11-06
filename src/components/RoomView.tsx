@@ -5,6 +5,7 @@ import { type Participant, RoomEvent } from "livekit-client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MAX_SPEAKERS, type RoomDef } from "@/lib/rooms";
 import { avatarVar, initials } from "@/lib/session";
+import { useQuickExit } from "./QuickExit";
 
 type Msg = { id: string; name: string; text: string; me?: boolean };
 type Hand = { identity: string; name: string };
@@ -24,6 +25,7 @@ type Props = { room: RoomDef; host: boolean; handle: string; token: string; host
 
 export default function RoomView({ room, host, handle, token, hostKey, onLeave }: Props) {
   const lk = useRoomContext();
+  const { exit: quickExit } = useQuickExit();
   const participants = useParticipants();
   const { localParticipant, isMicrophoneEnabled } = useLocalParticipant();
   const [, bump] = useState(0);
@@ -147,6 +149,7 @@ export default function RoomView({ room, host, handle, token, hostKey, onLeave }
       <div className="topbar">
         <button className="btn ghost sm" onClick={() => { lk.disconnect(); onLeave(); }}>Leave quietly</button>
         <span className="livepill"><i />Live</span>
+        <button className="btn ghost sm" onClick={() => { lk.disconnect(); onLeave(); quickExit(); }}>Quick exit</button>
       </div>
       <div>
         <h1 className="display ptitle" style={{ fontSize: 22 }}>{room.title}</h1>

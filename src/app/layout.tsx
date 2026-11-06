@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { QuickExitProvider } from "@/components/QuickExit";
 
 export const metadata: Metadata = {
   title: "Therapia",
@@ -19,7 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
-        <main className="shell">{children}</main>
+        <QuickExitProvider><main className="shell">{children}</main></QuickExitProvider>
       </body>
     </html>
   );

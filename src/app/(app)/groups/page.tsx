@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { PageHead } from "@/components/ui";
 import { ROOMS } from "@/lib/rooms";
 
 export default function Groups() {
@@ -44,8 +45,7 @@ export default function Groups() {
 
   return (
     <>
-      <div className="topbar"><Link className="wordmark display" href="/">Therapia</Link></div>
-      <div><h1 className="display ptitle">Groups</h1><p className="muted">Free voice rooms, every week.</p></div>
+      <PageHead title="Groups" sub="Free voice rooms, every week." />
       {!configured && <div className="card"><p className="fine">Audio isn&rsquo;t configured yet. Add the LiveKit values to .env.local to see live rooms.</p></div>}
       {liveRooms.length > 0 && <section className="sec"><h2 className="sec-h display"><span className="livepill"><i />Live</span>Live now</h2>{liveRooms.map(card)}</section>}
       <section className="sec"><h2 className="sec-h display">All rooms</h2>{rest.map(card)}</section>

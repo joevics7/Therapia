@@ -10,7 +10,11 @@ Anonymous voice support groups, one-on-one therapy and self-help tools for Niger
 - Women-only rooms behind an invite code, checked on the server.
 - Audio is never recorded.
 
-`prototype/index.html` is the full clickable design (dashboard, therapy, library, tools). Those pages are not ported yet.
+- Homepage, dashboard (mood check-in, live rooms, tools, affirmation), Groups, Therapy (sample therapists and booking), Library and Tools (breathing, grounding, journal, quick exit), with a bottom nav.
+- Quick exit hides the screen behind a plain shopping list (double-tap "Notes" to return) and leaves any open room first.
+- Mood log, journal, saved items and bookings are stored on the device only (localStorage) until Supabase accounts are added. Therapists, books and prices are samples in `src/lib/data.ts`.
+
+`prototype/index.html` is the original design reference.
 
 ## Run it
 ```bash
@@ -31,4 +35,4 @@ Open http://localhost:3000. Test voice with two devices: one joins as host (tap 
 - Never commit `.env.local`.
 
 ## Next
-Dashboard, therapy booking, library and tools pages; facilitator accounts; crisis protocol and verified helplines; Pidgin copy.
+Supabase (anonymous accounts, recovery phrase, facilitator logins, schedules, real bookings and payments); crisis protocol and verified helplines; Pidgin copy.
