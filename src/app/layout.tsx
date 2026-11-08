@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { AuthProvider } from "@/components/AuthProvider";
 import { QuickExitProvider } from "@/components/QuickExit";
 
 export const metadata: Metadata = {
@@ -20,7 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
-        <QuickExitProvider><main className="shell">{children}</main></QuickExitProvider>
+        <AuthProvider><QuickExitProvider><main className="shell">{children}</main></QuickExitProvider></AuthProvider>
       </body>
     </html>
   );

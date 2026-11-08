@@ -4,13 +4,11 @@ import { useState } from "react";
 import { Chips, PageHead, Sheet, useToast } from "@/components/ui";
 import { PRO_FILTERS, PROS, type Pro, money } from "@/lib/data";
 import { avatarVar, initials } from "@/lib/session";
-import { useStored } from "@/lib/store";
-
-type Booking = { name: string; slot: string; plan: string };
+import { useBookings } from "@/lib/hooks";
 
 export default function Therapy() {
   const [filter, setFilter] = useState("All");
-  const [bookings, setBookings] = useStored<Booking[]>("bookings", []);
+  const { list: bookings, add, cancel, signedIn } = useBookings();
   const [pro, setPro] = useState<Pro | null>(null);
   const [slot, setSlot] = useState("");
   const [plan, setPlan] = useState<"one" | "month">("one");
@@ -20,11 +18,12 @@ export default function Therapy() {
   const open = (p: Pro) => { setPro(p); setSlot(p.slots[0]); setPlan("one"); };
   const price = pro ? (plan === "one" ? pro.price : Math.round((pro.price * 4 * 0.85) / 100) * 100) : 0;
 
-  const confirm = () => {
+  const confirm = async () => {
     if (!pro) return;
-    setBookings((b) => [...b, { name: pro.name, slot, plan: plan === "one" ? "Per session" : "Monthly plan" }]);
-    say(`Booked with ${pro.name}. Prototype: no payment taken.`);
-    setPro(null);
+    if (!signedIn) { say("Your account isn't ready yet. Try again in a moment."); return; }
+    const ok = await add({ pro_id: pro.id, pro_name: pro.name, slot, plan, price_ngn: price });
+    say(ok ? `Requested ${pro.name}. Prototype: no payment taken.` : "Couldn't save the booking. Try again.");
+    if (ok) setPro(null);
   };
 
   return (
@@ -32,11 +31,16 @@ export default function Therapy() {
       {toast}
       <PageHead title="Therapy" sub="One-on-one voice sessions with licensed therapists." />
       <div className="card"><p>Your group name stays anonymous. Payment is kept separate from it.</p></div>
-      {bookings.length > 0 && (
+      {bookings.filter((b) => b.status !== "cancelled").length > 0 && (
         <section className="sec">
           <h2 className="sec-h display">Your sessions</h2>
-          {bookings.map((b, i) => (
-            <div className="card" key={i}><b>{b.name}</b><div className="muted">{b.slot} · {b.plan}</div><div className="fine">The call opens 5 minutes before the start.</div></div>
+          {bookings.filter((b) => b.status !== "cancelled").map((b) => (
+            <div className="card" key={b.id}>
+              <b>{b.pro_name}</b>
+              <div className="muted">{b.slot} · {b.plan === "one" ? "Per session" : "Monthly plan"} · {money(b.price_ngn)}</div>
+              <div className="fine">Status: {b.status}. The call opens 5 minutes before the start.</div>
+              <button className="btn ghost sm" style={{ justifySelf: "start" }} onClick={async () => say((await cancel(b.id)) ? "Booking cancelled." : "Couldn't cancel. Try again.")}>Cancel</button>
+            </div>
           ))}
         </section>
       )}

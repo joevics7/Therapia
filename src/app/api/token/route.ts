@@ -1,51 +1,44 @@
 import { AccessToken } from "livekit-server-sdk";
-import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
-import { getRoom } from "@/lib/rooms";
-import { cleanHandle, isHostKey, livekitEnv, safeEqual } from "@/lib/server";
+import { bearer, livekitEnv, ROOM_ID } from "@/lib/server";
+import { userClient } from "@/lib/supabase";
 
 export const runtime = "nodejs";
 
-// Issues a short-lived room token. No account, email or phone is involved.
-// Everyone joins as a listener. Only a verified host can speak straight away.
+// Issues a short-lived audio token. The database decides who is a member and who is the host.
+// The audio identity is the person's per-group alias, so nobody can be linked across groups.
 export async function POST(req: Request) {
   const env = livekitEnv();
   if (!env) return NextResponse.json({ error: "Audio is not configured yet." }, { status: 503 });
 
-  let body: { roomId?: string; handle?: string; code?: string; hostKey?: string };
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Bad request." }, { status: 400 });
-  }
+  const jwt = bearer(req);
+  if (!jwt) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
 
-  const room = getRoom(String(body.roomId ?? ""));
-  if (!room) return NextResponse.json({ error: "Room not found." }, { status: 404 });
+  let roomId = "";
+  try { roomId = String((await req.json()).roomId ?? ""); } catch { /* handled below */ }
+  if (!ROOM_ID.test(roomId)) return NextResponse.json({ error: "Room not found." }, { status: 404 });
 
-  const host = isHostKey(body.hostKey);
+  const sb = userClient(jwt);
+  const { data: u, error: uerr } = await sb.auth.getUser(jwt);
+  if (uerr || !u.user) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
 
-  if (room.women && !host) {
-    const real = process.env.WOMEN_INVITE_CODE;
-    const given = String(body.code ?? "").trim().toUpperCase();
-    if (!real || !given || !safeEqual(given, real.trim().toUpperCase())) {
-      return NextResponse.json({ error: "That invite code didn't work." }, { status: 403 });
-    }
-  }
+  const { data: acc } = await sb.rpc("room_access", { p_room: roomId });
+  if (!acc?.ok) return NextResponse.json({ error: "Join the group first." }, { status: 403 });
 
-  const identity = randomUUID(); // random per join, never linked to a person
+  const host = !!acc.is_host;
   const at = new AccessToken(env.key, env.secret, {
-    identity,
-    name: cleanHandle(body.handle),
+    identity: String(acc.alias),
+    name: String(acc.handle),
     ttl: "3h",
     metadata: JSON.stringify({ role: host ? "host" : "listener" }),
   });
   at.addGrant({
     roomJoin: true,
-    room: room.id,
+    room: roomId,
     canSubscribe: true,
     canPublish: host,
     canPublishData: true,
-    roomAdmin: false, // admin actions go through /api/room-control, which checks the host key
+    roomAdmin: false, // admin actions go through /api/room-control, which asks the database if you are the host
   });
 
   return NextResponse.json({ token: await at.toJwt(), url: env.url, host });

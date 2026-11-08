@@ -1,10 +1,6 @@
-import { notFound } from "next/navigation";
-import RoomClient from "@/components/RoomClient";
-import { getRoom } from "@/lib/rooms";
+import { LiveRoomEntry } from "@/components/RoomEntry";
 
 export default async function RoomPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const room = getRoom(id);
-  if (!room) notFound();
-  return <RoomClient room={room} />;
+  return <LiveRoomEntry id={id} />;
 }

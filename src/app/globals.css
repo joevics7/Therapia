@@ -210,3 +210,21 @@ button, input { font: inherit; color: inherit; }
 .sheet { position: relative; width: 100%; max-width: 480px; max-height: 88%; overflow: auto; background: var(--surface); border-top: 1px solid var(--line); border-radius: 26px 26px 0 0; padding: 22px 20px calc(24px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 12px; }
 .sheet h3 { font-size: 22px; font-weight: 800; line-height: 1.1; }
 .placeholder { border: 1.5px dashed var(--line); border-radius: 14px; padding: 10px 12px; font-size: 13px; color: var(--muted); background: var(--bg); }
+
+/* ---- chat, forms, host ---- */
+.chat { display: grid; gap: 8px; }
+.panel.tall { max-height: 52dvh; }
+.msg-acts { display: flex; gap: 12px; margin-top: 2px; }
+.msg-acts button { border: 0; background: transparent; color: var(--muted); font-size: 12px; padding: 4px 0; cursor: pointer; }
+.msg-acts button:hover { color: var(--ink); text-decoration: underline; }
+.notice { background: color-mix(in srgb, var(--sun) 18%, var(--surface)); border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; font-size: 14px; }
+.phrase { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; list-style: none; padding: 0; counter-reset: w; }
+.phrase li { counter-increment: w; background: var(--surface2); border-radius: 12px; padding: 10px 12px; font-weight: 700; font-size: 16px; }
+.phrase li::before { content: counter(w) "  "; color: var(--muted); font-weight: 600; font-size: 12px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.stack { display: grid; gap: 10px; }
+.check { display: flex; gap: 10px; align-items: flex-start; font-weight: 600; }
+.check input { width: 22px; height: 22px; margin-top: 1px; flex: none; }
+.sess { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; border-top: 1px solid var(--line); }
+.rep { border: 1px solid var(--line); border-radius: 14px; padding: 12px; display: grid; gap: 8px; background: var(--bg); }
+.rep blockquote { margin: 0; padding-left: 10px; border-left: 3px solid var(--sun); overflow-wrap: anywhere; }

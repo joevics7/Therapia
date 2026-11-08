@@ -3,20 +3,21 @@
 import { useState } from "react";
 import { Chips, PageHead, Sheet, useToast } from "@/components/ui";
 import { LIB, LIB_FILTERS, type LibItem } from "@/lib/data";
-import { useStored } from "@/lib/store";
+import { useSaved } from "@/lib/hooks";
 
 export default function Library() {
   const [filter, setFilter] = useState("All");
-  const [saved, setSaved] = useStored<Record<string, boolean>>("saved", {});
+  const { saved, toggle: toggleSaved, signedIn } = useSaved();
   const [item, setItem] = useState<LibItem | null>(null);
   const { say, toast } = useToast();
 
   const list = LIB.filter((x) => filter === "All" || (filter === "Saved" ? saved[x.id] : x.type === filter));
-  const toggle = (id: string) => setSaved((s) => {
-    const n = { ...s };
-    if (n[id]) delete n[id]; else { n[id] = true; say("Saved to your library."); }
-    return n;
-  });
+  const toggle = async (id: string) => {
+    if (!signedIn) { say("Your account isn't ready yet. Try again in a moment."); return; }
+    const was = !!saved[id];
+    const ok = await toggleSaved(id);
+    if (!ok) say("Couldn't save that. Try again."); else if (!was) say("Saved to your library.");
+  };
 
   return (
     <>

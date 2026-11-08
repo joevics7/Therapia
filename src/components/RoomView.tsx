@@ -3,14 +3,13 @@
 import { useLocalParticipant, useParticipants, useRoomContext } from "@livekit/components-react";
 import { type Participant, RoomEvent } from "livekit-client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { authPost } from "@/lib/api";
 import { MAX_SPEAKERS, type RoomDef } from "@/lib/rooms";
 import { avatarVar, initials } from "@/lib/session";
+import GroupChat from "./GroupChat";
 import { useQuickExit } from "./QuickExit";
 
-type Msg = { id: string; name: string; text: string; me?: boolean };
 type Hand = { identity: string; name: string };
-
-const BLOCKED = /(\+?\d[\d\s\-]{6,}\d)|https?:\/\/|www\./i; // keeps phone numbers and links out of rooms
 const enc = new TextEncoder();
 const dec = new TextDecoder();
 
@@ -21,21 +20,18 @@ const Avatar = ({ name, size }: { name: string; size: number }) => (
   <span className="av" style={{ "--s": `${size}px`, background: avatarVar(name) } as React.CSSProperties} aria-hidden="true">{initials(name)}</span>
 );
 
-type Props = { room: RoomDef; host: boolean; handle: string; token: string; hostKey: string; onLeave: () => void };
+type Props = { room: RoomDef; host: boolean; alias: string; token: string; onLeave: () => void };
 
-export default function RoomView({ room, host, handle, token, hostKey, onLeave }: Props) {
+export default function RoomView({ room, host, alias, token, onLeave }: Props) {
   const lk = useRoomContext();
   const { exit: quickExit } = useQuickExit();
   const participants = useParticipants();
   const { localParticipant, isMicrophoneEnabled } = useLocalParticipant();
   const [, bump] = useState(0);
   const [tab, setTab] = useState<"chat" | "hands">("chat");
-  const [msgs, setMsgs] = useState<Msg[]>([]);
   const [hands, setHands] = useState<Hand[]>([]);
   const [myHand, setMyHand] = useState(false);
-  const [text, setText] = useState("");
   const [toast, setToast] = useState("");
-  const chatEnd = useRef<HTMLDivElement>(null);
   const toastT = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const say = useCallback((m: string) => {
@@ -58,20 +54,14 @@ export default function RoomView({ room, host, handle, token, hostKey, onLeave }
     return lk.localParticipant.publishData(enc.encode(JSON.stringify(payload)), { reliable: true, topic });
   }, [lk]);
 
-  // incoming chat and hand signals
+  // raised hands travel over the live audio connection (no storage)
   useEffect(() => {
     const onData = (payload: Uint8Array, p?: Participant, _k?: unknown, topic?: string) => {
-      if (!p) return;
-      let d: { text?: string; type?: string };
+      if (!p || topic !== "hand") return;
+      let d: { type?: string };
       try { d = JSON.parse(dec.decode(payload)); } catch { return; }
-      if (topic === "chat" && typeof d.text === "string") {
-        const t = d.text.slice(0, 240);
-        if (BLOCKED.test(t)) return;
-        setMsgs((m) => [...m.slice(-59), { id: crypto.randomUUID(), name: p.name || "Guest", text: t }]);
-      } else if (topic === "hand") {
-        if (d.type === "raise") setHands((h) => (h.some((x) => x.identity === p.identity) ? h : [...h, { identity: p.identity, name: p.name || "Guest" }]));
-        if (d.type === "lower") setHands((h) => h.filter((x) => x.identity !== p.identity));
-      }
+      if (d.type === "raise") setHands((h) => (h.some((x) => x.identity === p.identity) ? h : [...h, { identity: p.identity, name: p.name || "Guest" }]));
+      if (d.type === "lower") setHands((h) => h.filter((x) => x.identity !== p.identity));
     };
     const onLeft = (p: Participant) => setHands((h) => h.filter((x) => x.identity !== p.identity));
     const onJoined = () => { if (myHand) send("hand", { type: "raise" }).catch(() => {}); }; // lets a late host see raised hands
@@ -95,16 +85,10 @@ export default function RoomView({ room, host, handle, token, hostKey, onLeave }
     };
   }, [lk, myHand, send, say]);
 
-  useEffect(() => { chatEnd.current?.scrollIntoView({ block: "end" }); }, [msgs.length]);
-
   async function control(action: "allow" | "revoke" | "remove" | "end", identity?: string, useToken = false) {
-    const res = await fetch("/api/room-control", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action, roomId: room.id, identity, hostKey: useToken ? undefined : hostKey, token: useToken ? token : undefined }),
-    });
-    if (!res.ok) say("That didn't work. Try again.");
-    return res.ok;
+    const r = await authPost("/api/room-control", { action, roomId: room.id, identity, token: useToken ? token : undefined });
+    if (!r.ok) say("That didn't work. Try again.");
+    return r.ok;
   }
 
   async function invite(h: Hand) {
@@ -129,18 +113,7 @@ export default function RoomView({ room, host, handle, token, hostKey, onLeave }
     if (await control("revoke", undefined, true)) say("You stepped down. Still listening.");
   }
 
-  async function sendChat(e: React.FormEvent) {
-    e.preventDefault();
-    const t = text.trim().slice(0, 240);
-    if (!t) return;
-    if (BLOCKED.test(t)) { say("Phone numbers and links aren't allowed in rooms. It keeps everyone safe."); return; }
-    setText("");
-    setMsgs((m) => [...m.slice(-59), { id: crypto.randomUUID(), name: handle, text: t, me: true }]);
-    await send("chat", { text: t }).catch(() => say("Message didn't send."));
-  }
-
   async function endRoom() { if (await control("end")) onLeave(); }
-
   const speaking = (p?: Participant) => !!p?.isSpeaking;
 
   return (
@@ -195,32 +168,20 @@ export default function RoomView({ room, host, handle, token, hostKey, onLeave }
         <button className="tab" role="tab" aria-selected={tab === "hands"} onClick={() => setTab("hands")}>Raised hands<span className="count">{hands.length}</span></button>
       </div>
 
-      {tab === "chat" ? (
-        <div className="panel" role="log">
-          {msgs.length === 0 && <p className="empty">Be kind. Chat is for support, not contact details.</p>}
-          {msgs.map((m) => (
-            <div className={`msg${m.me ? " me" : ""}`} key={m.id}>
-              <Avatar name={m.name} size={30} />
-              <div className="bub"><div className="who">{m.me ? "You" : m.name}</div><p>{m.text}</p></div>
-            </div>
-          ))}
-          <div ref={chatEnd} />
-        </div>
-      ) : (
-        <div className="panel">
-          {hands.length === 0 && <p className="empty">No hands up right now.</p>}
-          {hands.map((h) => (
-            <div className="hand-row" key={h.identity}>
-              <Avatar name={h.name} size={36} />
-              <span className="hn">{h.name}</span>
-              {host && (<>
-                <button className="btn soft sm" onClick={() => invite(h)}>Invite</button>
-                <button className="btn ghost sm" onClick={() => { control("remove", h.identity); setHands((x) => x.filter((y) => y.identity !== h.identity)); }}>Remove</button>
-              </>)}
-            </div>
-          ))}
-        </div>
-      )}
+      <div hidden={tab !== "chat"}><GroupChat roomId={room.id} alias={alias} isHost={host} compact /></div>
+      <div className="panel" hidden={tab !== "hands"}>
+        {hands.length === 0 && <p className="empty">No hands up right now.</p>}
+        {hands.map((h) => (
+          <div className="hand-row" key={h.identity}>
+            <Avatar name={h.name} size={36} />
+            <span className="hn">{h.name}</span>
+            {host && (<>
+              <button className="btn soft sm" onClick={() => invite(h)}>Invite</button>
+              <button className="btn ghost sm" onClick={() => { control("remove", h.identity); setHands((x) => x.filter((y) => y.identity !== h.identity)); }}>Remove</button>
+            </>)}
+          </div>
+        ))}
+      </div>
 
       <div className="dock">
         <div className="act-row">
@@ -233,10 +194,6 @@ export default function RoomView({ room, host, handle, token, hostKey, onLeave }
             <button className={`btn ${myHand ? "soft" : "accent"}`} onClick={toggleHand}>{myHand ? "Lower hand" : "Raise hand"}</button>
           )}
         </div>
-        <form className="chatform" onSubmit={sendChat}>
-          <input className="field" value={text} onChange={(e) => setText(e.target.value)} maxLength={240} placeholder="Write something kind…" autoComplete="off" aria-label="Message" />
-          <button className="btn primary" type="submit" aria-label="Send">Send</button>
-        </form>
       </div>
     </>
   );

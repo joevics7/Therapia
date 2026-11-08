@@ -1,15 +1,15 @@
 import { RoomServiceClient, TokenVerifier } from "livekit-server-sdk";
 import { NextResponse } from "next/server";
-import { isHostKey, livekitEnv } from "@/lib/server";
+import { bearer, livekitEnv, ROOM_ID } from "@/lib/server";
+import { userClient } from "@/lib/supabase";
 
 export const runtime = "nodejs";
 
 type Body = {
   action?: "allow" | "revoke" | "remove" | "end";
   roomId?: string;
-  identity?: string;
-  hostKey?: string;
-  token?: string; // a participant may revoke their own speaking right by proving their token
+  identity?: string; // the person's alias in this room
+  token?: string; // a participant may stop their own speaking by proving their audio token
 };
 
 export async function POST(req: Request) {
@@ -17,29 +17,27 @@ export async function POST(req: Request) {
   if (!env) return NextResponse.json({ error: "Audio is not configured yet." }, { status: 503 });
 
   let b: Body;
-  try {
-    b = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Bad request." }, { status: 400 });
-  }
+  try { b = await req.json(); } catch { return NextResponse.json({ error: "Bad request." }, { status: 400 }); }
   const roomId = String(b.roomId ?? "");
-  if (!roomId || !b.action) return NextResponse.json({ error: "Bad request." }, { status: 400 });
+  if (!ROOM_ID.test(roomId) || !b.action) return NextResponse.json({ error: "Bad request." }, { status: 400 });
 
   const svc = new RoomServiceClient(env.httpUrl, env.key, env.secret);
-  const host = isHostKey(b.hostKey);
+  const perms = (canPublish: boolean) => ({ canPublish, canSubscribe: true, canPublishData: true });
 
   try {
-    // Self step-down: allowed with the participant's own valid token.
-    if (!host && b.action === "revoke" && b.token) {
+    // Step down: allowed with your own valid audio token.
+    if (b.action === "revoke" && b.token) {
       const claims = await new TokenVerifier(env.key, env.secret).verify(b.token);
       if (claims.video?.room !== roomId || !claims.sub) throw new Error("bad token");
-      await svc.updateParticipant(roomId, claims.sub, undefined, {
-        canPublish: false, canSubscribe: true, canPublishData: true,
-      });
+      await svc.updateParticipant(roomId, claims.sub, undefined, perms(false));
       return NextResponse.json({ ok: true });
     }
 
-    if (!host) return NextResponse.json({ error: "Host key needed." }, { status: 403 });
+    // Everything else is for the group's host (or an admin), decided by the database.
+    const jwt = bearer(req);
+    if (!jwt) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
+    const { data: isHost } = await userClient(jwt).rpc("is_room_host", { p_room: roomId });
+    if (isHost !== true) return NextResponse.json({ error: "Only the host can do that." }, { status: 403 });
 
     const identity = String(b.identity ?? "");
     if (b.action === "end") {
@@ -49,9 +47,7 @@ export async function POST(req: Request) {
     } else if (b.action === "remove") {
       await svc.removeParticipant(roomId, identity);
     } else {
-      await svc.updateParticipant(roomId, identity, undefined, {
-        canPublish: b.action === "allow", canSubscribe: true, canPublishData: true,
-      });
+      await svc.updateParticipant(roomId, identity, undefined, perms(b.action === "allow"));
     }
     return NextResponse.json({ ok: true });
   } catch {

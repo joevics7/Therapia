@@ -2,37 +2,46 @@
 
 Anonymous voice support groups, one-on-one therapy and self-help tools for Nigeria, then Africa.
 
-## What works now
-- Anonymous entry: random handle, no email or phone.
-- Groups list with live rooms and listener counts (polls LiveKit every 15 s).
-- Live audio rooms (LiveKit): host speaks, everyone else listens, raise hand, host invites to speak, step down, mute, remove, end room.
-- Room chat over the LiveKit data channel. Phone numbers and links are blocked.
-- Women-only rooms behind an invite code, checked on the server.
-- Audio is never recorded.
+## What works
+- **Anonymous accounts** (Supabase). No email or phone. Optional 6-word recovery phrase restores the account on a new phone.
+- **Groups** from the database, with live status and listener counts (LiveKit), schedules and reminders.
+- **Live audio rooms** (LiveKit): host speaks, listeners raise a hand, host invites, step down, mute, remove, end. Audio is never recorded.
+- **Text chat per group**, saved in Supabase and shown live. Messages are deleted after 7 days. Phone numbers and links are blocked on the server. Members can report; hosts review.
+- **Women-only groups**: per-group invite codes set by the host (stored scrambled, can expire).
+- **Facilitator sign-in** and **Host tools**: schedule, dated sessions, invite code, reports (delete message, block, dismiss).
+- **Therapy bookings** and **saved library items** stored in the user's account (no payment yet).
+- Dashboard, tools (breathing, grounding, journal, quick exit). Mood log and journal stay on the device only.
 
-- Homepage, dashboard (mood check-in, live rooms, tools, affirmation), Groups, Therapy (sample therapists and booking), Library and Tools (breathing, grounding, journal, quick exit), with a bottom nav.
-- Quick exit hides the screen behind a plain shopping list (double-tap "Notes" to return) and leaves any open room first.
-- Mood log, journal, saved items and bookings are stored on the device only (localStorage) until Supabase accounts are added. Therapists, books and prices are samples in `src/lib/data.ts`.
-
-`prototype/index.html` is the original design reference.
-
-## Run it
+## Set up
 ```bash
 npm install
 cp .env.example .env.local   # fill in the values
 npm run dev
 ```
-Open http://localhost:3000. Test voice with two devices: one joins as host (tap "I'm the host", enter `HOST_KEY`), one as a listener.
+Supabase settings (Authentication, in the dashboard):
+1. Turn **Anonymous sign-ins** on.
+2. Turn **Confirm email** off (the recovery phrase uses a private, never-emailed address).
+
+Create a facilitator: add the user in Authentication > Users, then in the SQL editor:
+```sql
+update public.profiles set role = 'facilitator' where user_id = '<their user id>';
+update public.rooms set host_id = '<their user id>' where id = 'safe';
+```
+Use `role = 'admin'` for yourself to manage every group.
+
+## Privacy design
+- Each person gets a random **alias per group**, so they can't be linked across groups. Chat and audio use the alias.
+- Listeners are never asked for personal details. Hosts can't see user ids; reports hide who reported.
+- Only the database decides who is a member or host. The shared host key and shared women-only code are gone.
 
 ## LiveKit: Cloud now, self-hosted later
-1. Create a free project at LiveKit Cloud and copy the URL, API key and secret into `.env.local`.
-2. To self-host later: run `docker-compose.yml` on a VPS (edit `infra/livekit.yaml` first), put a TLS proxy in front for `wss://`, then change only the three `LIVEKIT_*` values. No code changes.
+Change only the three `LIVEKIT_*` values. `docker-compose.yml` and `infra/livekit.yaml` are ready for self-hosting.
 
-## Security notes (read before going public)
-- `HOST_KEY` is one shared secret. Fine for a pilot; replace with real facilitator accounts before launch.
-- `WOMEN_INVITE_CODE` is one shared code. Per-group codes and rotation come next.
-- Rate-limit `/api/token` before public launch. Chat filtering is also client-side only.
-- Never commit `.env.local`.
+## Housekeeping (automatic, in the database)
+Chat deleted after 7 days. Reports after 30 days. Code attempts after 1 day.
 
-## Next
-Supabase (anonymous accounts, recovery phrase, facilitator logins, schedules, real bookings and payments); crisis protocol and verified helplines; Pidgin copy.
+## Known gaps
+- Payments are not implemented; bookings are requests. Therapists and library items are samples in `src/lib/data.ts`.
+- Anonymous accounts that are never used again are not cleaned up yet.
+- The audio token route has no rate limit yet.
+- Crisis protocol and verified helpline numbers still need adding.

@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { HelpSheet } from "@/components/ui";
 import { AFFIRM, MOODS, MOOD_MSG, TOOLS } from "@/lib/data";
-import { ROOMS } from "@/lib/rooms";
+import { useRooms } from "@/lib/hooks";
+import { useAuth } from "@/components/AuthProvider";
 import { avatarVar, getHandle, initials, newHandle, setHandle } from "@/lib/session";
 import { dayKey, useStored } from "@/lib/store";
 
@@ -27,6 +28,8 @@ export default function Dashboard() {
   const [log, setLog] = useStored<Record<string, number>>("moods", {});
   const [aff, setAff] = useState(0);
   const [live, setLive] = useState<Record<string, number>>({});
+  const rooms = useRooms();
+  const { isAnonymous, error: authError } = useAuth();
 
   useEffect(() => {
     let h = getHandle();
@@ -37,7 +40,7 @@ export default function Dashboard() {
 
   const today = dayKey();
   const mood = log[today];
-  const liveRooms = ROOMS.filter((r) => live[r.id]);
+  const liveRooms = (rooms ?? []).filter((r) => live[r.id]);
 
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(Date.now() - (6 - i) * 86400000);
@@ -101,6 +104,13 @@ export default function Dashboard() {
         </section>
       )}
       <Link className="btn ghost" href="/groups">All groups →</Link>
+
+      {isAnonymous && !authError && (
+        <section className="notice">
+          <b>Keep your data safe.</b> Your account lives on this phone. Make a recovery phrase to get it back on a new phone, with no email or number.
+          <div className="row" style={{ marginTop: 10 }}><Link className="btn primary sm" href="/account">Set up recovery</Link></div>
+        </section>
+      )}
 
       <section className="sec">
         <h2 className="sec-h display">Quick tools</h2>

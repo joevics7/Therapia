@@ -72,6 +72,7 @@ export default function Landing() {
         </ul>
         {enter}
       </section>
+      <p className="fine"><Link href="/host/login">Facilitator sign-in</Link> · <Link href="/account">Restore my account</Link></p>
     </>
   );
 }

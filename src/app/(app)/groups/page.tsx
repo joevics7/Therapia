@@ -2,10 +2,16 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { PageHead } from "@/components/ui";
-import { ROOMS } from "@/lib/rooms";
+import { useAuth } from "@/components/AuthProvider";
+import { PageHead, useToast } from "@/components/ui";
+import { useReminders, useRooms } from "@/lib/hooks";
+import type { RoomDef } from "@/lib/rooms";
 
 export default function Groups() {
+  const rooms = useRooms();
+  const { on, toggle } = useReminders();
+  const { error: authError } = useAuth();
+  const { say, toast } = useToast();
   const [live, setLive] = useState<Record<string, number>>({});
   const [configured, setConfigured] = useState(true);
 
@@ -21,10 +27,17 @@ export default function Groups() {
     return () => { stop = true; clearInterval(t); };
   }, []);
 
-  const liveRooms = ROOMS.filter((r) => live[r.id]);
-  const rest = ROOMS.filter((r) => !live[r.id]);
+  const remind = async (r: RoomDef) => {
+    if (authError) { say("Reminders need an account, which isn't ready yet."); return; }
+    const x = await toggle(r.id);
+    say(!x.ok ? "Couldn't save that. Try again." : x.now ? "We'll remind you before it starts." : "Reminder removed.");
+  };
 
-  const card = (r: (typeof ROOMS)[number]) => (
+  const list = rooms ?? [];
+  const liveRooms = list.filter((r) => live[r.id]);
+  const rest = list.filter((r) => !live[r.id]);
+
+  const card = (r: RoomDef) => (
     <article key={r.id} className={`rcard pal-${r.pal}`}>
       <div className="tile ankara" aria-hidden="true" />
       <div>
@@ -32,24 +45,28 @@ export default function Groups() {
         <h3 className="display">{r.title}</h3>
         <div className="rc-host">{r.host}</div>
         <div className="rc-meta">
-          {live[r.id] ? (<><span className="livepill"><i />Live</span><span>{live[r.id]} listening</span></>) : (<span style={{ fontWeight: 700 }}>{r.when} WAT</span>)}
+          {live[r.id] ? (<><span className="livepill"><i />Live</span><span>{live[r.id]} listening</span></>) : (<span style={{ fontWeight: 700 }}>{r.next ? `Next: ${r.next}` : `${r.when} WAT`}</span>)}
           {r.women && <span className="badge hib">Women only</span>}
           {r.men && <span className="badge">For men</span>}
         </div>
       </div>
-      <div className="rc-act">
+      <div className="rc-act row">
         <Link className={`btn sm ${live[r.id] ? "accent" : "ghost"}`} href={`/room/${r.id}`}>{live[r.id] ? "Join" : "Open room"}</Link>
+        <Link className="btn sm ghost" href={`/chat/${r.id}`}>Chat</Link>
+        {!live[r.id] && <button className="btn sm soft" aria-pressed={!!on[r.id]} onClick={() => remind(r)}>{on[r.id] ? "Reminder on ✓" : "Remind me"}</button>}
       </div>
     </article>
   );
 
   return (
     <>
+      {toast}
       <PageHead title="Groups" sub="Free voice rooms, every week." />
       {!configured && <div className="card"><p className="fine">Audio isn&rsquo;t configured yet. Add the LiveKit values to .env.local to see live rooms.</p></div>}
+      {rooms === null && <p className="muted">Loading groups…</p>}
       {liveRooms.length > 0 && <section className="sec"><h2 className="sec-h display"><span className="livepill"><i />Live</span>Live now</h2>{liveRooms.map(card)}</section>}
-      <section className="sec"><h2 className="sec-h display">All rooms</h2>{rest.map(card)}</section>
-      <p className="fine">Times are Lagos time (WAT). Anyone can open a room, but a room only goes live when its host joins.</p>
+      {rooms !== null && <section className="sec"><h2 className="sec-h display">All groups</h2>{rest.map(card)}</section>}
+      <p className="fine">Times are Lagos time (WAT). A room goes live when its host joins. Group chat is text only and messages disappear after 7 days.</p>
     </>
   );
 }
