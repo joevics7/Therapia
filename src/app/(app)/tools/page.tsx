@@ -44,13 +44,13 @@ export default function Tools() {
     );
   }
   return (
-    <>
+    <div className="pg-narrow">
       <div><button className="btn ghost sm" onClick={() => open(null)}>← All tools</button></div>
       {tool === "breathe" && <Breathe />}
       {tool === "ground" && <Ground onDone={() => open(null)} />}
       {tool === "journal" && <Journal />}
       {tool === "safety" && <Safety />}
-    </>
+    </div>
   );
 }
 

@@ -20,10 +20,12 @@ export default function Landing() {
   const enter = <Link className="btn primary big" href="/dashboard">Enter as {handle || "…"}</Link>;
 
   return (
-    <>
+    <div className="pg-wide land">
       <div className="topbar"><span className="wordmark display">Therapia</span></div>
+      <div className="land-top">
       <h1 className="tag display">Say it out loud. Nobody has to know it&rsquo;s you.</h1>
       <div className="hero ankara pal-a" aria-hidden="true" />
+      <div className="land-card">
       <div className="namecard">
         <span className="av" style={{ "--s": "72px", background: avatarVar(handle || "x") } as React.CSSProperties}>{initials(handle)}</span>
         <div className="nc-text"><div className="eyebrow">Your name here</div><div className="handle display">{handle || " "}</div></div>
@@ -35,6 +37,8 @@ export default function Landing() {
         <li><span className="ic">✓</span>Audio is never recorded.</li>
         <li><span className="ic">✓</span>Pick a new name any time.</li>
       </ul>
+      </div>
+      </div>
 
       <section className="sec">
         <h2 className="sec-h display">How it works</h2>
@@ -73,6 +77,6 @@ export default function Landing() {
         {enter}
       </section>
       <p className="fine"><Link href="/host/login">Facilitator sign-in</Link> · <Link href="/account">Restore my account</Link></p>
-    </>
+    </div>
   );
 }

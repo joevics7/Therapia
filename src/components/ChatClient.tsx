@@ -16,7 +16,7 @@ export default function ChatClient({ room }: { room: RoomDef }) {
     : authError ? "Your account couldn't start. Anonymous sign-ins may be switched off in Supabase." : "";
 
   return (
-    <>
+    <div className="pg-narrow">
       <div className="topbar">
         <Link className="btn ghost sm" href="/groups">← Groups</Link>
         <Link className="btn accent sm" href={`/room/${room.id}`}>Go to live room</Link>
@@ -41,6 +41,6 @@ export default function ChatClient({ room }: { room: RoomDef }) {
           <button className="btn primary big" type="submit" disabled={busy || !handle || !!problem}>{busy ? "Joining…" : "Join this group"}</button>
         </form>
       )}
-    </>
+    </div>
   );
 }

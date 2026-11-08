@@ -55,7 +55,7 @@ export default function Dashboard() {
   };
 
   return (
-    <>
+    <div className="dash">
       <header className="home-top">
         <div className="who">
           <span className="av" style={{ "--s": "44px", background: avatarVar(handle || "x") } as React.CSSProperties}>{initials(handle)}</span>
@@ -64,6 +64,7 @@ export default function Dashboard() {
         <button className="pill-help" onClick={() => setHelp(true)}>♥ Need help now</button>
       </header>
 
+      <div className="dash-main">
       <section className="card">
         <h2 className="sec-h display">How are you today?</h2>
         <div className="moods">
@@ -112,6 +113,8 @@ export default function Dashboard() {
         </section>
       )}
 
+      </div>
+      <div className="dash-side">
       <section className="sec">
         <h2 className="sec-h display">Quick tools</h2>
         <div className="toolgrid">
@@ -137,7 +140,8 @@ export default function Dashboard() {
         <div className="act"><Link className="btn primary sm" href="/therapy">See therapists</Link></div>
       </section>
       <div className="topbar"><Link className="btn ghost sm" href="/">About Therapia</Link></div>
+      </div>
       {help && <HelpSheet onClose={() => setHelp(false)} />}
-    </>
+    </div>
   );
 }

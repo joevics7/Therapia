@@ -14,6 +14,7 @@ export default function NavBar() {
   const path = usePathname();
   return (
     <nav className="nav" aria-label="Main">
+      <span className="nav-brand display" aria-hidden="true">Therapia</span>
       <div className="nav-in">
         {NAV.map((n) => (
           <Link key={n.href} href={n.href} aria-current={path === n.href ? "page" : undefined}>

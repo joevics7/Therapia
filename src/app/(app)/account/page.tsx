@@ -66,7 +66,7 @@ export default function Account() {
   if (error) return (<><PageHead title="Account" /><div className="card"><p className="err">{error === "not_configured" ? "Accounts aren't set up yet." : "Your account couldn't start. Anonymous sign-ins may be switched off in Supabase."}</p></div></>);
 
   return (
-    <>
+    <div className="pg-narrow">
       <PageHead title="Account" sub="No email. No phone number." />
 
       {staff ? (
@@ -109,6 +109,6 @@ export default function Account() {
 
       {msg && <p className="notice" role="status">{msg}</p>}
       <p className="fine">Your mood log and journal stay on this phone only. They are not part of the backup.</p>
-    </>
+    </div>
   );
 }

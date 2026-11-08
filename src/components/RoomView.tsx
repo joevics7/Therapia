@@ -117,7 +117,7 @@ export default function RoomView({ room, host, alias, token, onLeave }: Props) {
   const speaking = (p?: Participant) => !!p?.isSpeaking;
 
   return (
-    <>
+    <div className="pg-wide room">
       {toast && <div className="toast" role="status" aria-live="polite">{toast}</div>}
       <div className="topbar">
         <button className="btn ghost sm" onClick={() => { lk.disconnect(); onLeave(); }}>Leave quietly</button>
@@ -138,6 +138,7 @@ export default function RoomView({ room, host, alias, token, onLeave }: Props) {
         </div>
       )}
 
+      <div className="room-cols">
       <div className="stage">
         {hostP ? (
           <div className={`member host${speaking(hostP) ? " speaking" : ""}`}>
@@ -163,6 +164,7 @@ export default function RoomView({ room, host, alias, token, onLeave }: Props) {
         <div className="fine"><b>{participants.length}</b> in the room · {listenerCount} listening</div>
       </div>
 
+      <div className="room-side">
       <div className="tabs" role="tablist">
         <button className="tab" role="tab" aria-selected={tab === "chat"} onClick={() => setTab("chat")}>Room chat</button>
         <button className="tab" role="tab" aria-selected={tab === "hands"} onClick={() => setTab("hands")}>Raised hands<span className="count">{hands.length}</span></button>
@@ -183,6 +185,8 @@ export default function RoomView({ room, host, alias, token, onLeave }: Props) {
         ))}
       </div>
 
+      </div>
+
       <div className="dock">
         <div className="act-row">
           {canSpeak ? (
@@ -195,6 +199,7 @@ export default function RoomView({ room, host, alias, token, onLeave }: Props) {
           )}
         </div>
       </div>
-    </>
+      </div>
+    </div>
   );
 }

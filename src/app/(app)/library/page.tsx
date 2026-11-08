@@ -24,6 +24,7 @@ export default function Library() {
       {toast}
       <PageHead title="Library" sub="Books, short reads and calm audio." />
       <Chips list={LIB_FILTERS} cur={filter} onPick={setFilter} />
+      <div className="cardgrid">
       {list.map((x) => {
         const free = x.price === "Free";
         return (
@@ -39,6 +40,7 @@ export default function Library() {
           </article>
         );
       })}
+      </div>
       {list.length === 0 && <p className="empty">Nothing saved yet. Tap Save on anything you want to come back to.</p>}
       <p className="fine">Sample titles. Real content is added before launch.</p>
       {item && (

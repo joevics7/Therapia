@@ -61,7 +61,7 @@ export default function RoomClient({ room }: { room: RoomDef }) {
     : authError ? "Your account couldn't start. Anonymous sign-ins may be switched off in Supabase." : "";
 
   return (
-    <>
+    <div className="pg-narrow">
       <div className="topbar"><Link className="wordmark display" href="/groups">Therapia</Link></div>
       <div className={`hero ankara pal-${room.pal}`} aria-hidden="true" style={{ height: 110 }} />
       <div>
@@ -83,6 +83,6 @@ export default function RoomClient({ room }: { room: RoomDef }) {
       </form>
       <p className="fine">Audio is never recorded. Chat messages disappear after 7 days. Phone numbers and links are blocked.</p>
       <Link className="btn ghost" href={`/chat/${room.id}`}>Open the group chat only</Link>
-    </>
+    </div>
   );
 }

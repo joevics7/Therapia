@@ -228,3 +228,101 @@ button, input { font: inherit; color: inherit; }
 .sess { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; border-top: 1px solid var(--line); }
 .rep { border: 1px solid var(--line); border-radius: 14px; padding: 12px; display: grid; gap: 8px; background: var(--bg); }
 .rep blockquote { margin: 0; padding-left: 10px; border-left: 3px solid var(--sun); overflow-wrap: anywhere; }
+
+/* ---- layout wrappers (same single column on phones) ---- */
+.appwrap, .pg-wide, .pg-narrow, .dash, .dash-main, .dash-side, .land, .land-card, .room { display: flex; flex-direction: column; gap: 18px; }
+.pg-wide, .appwrap { width: 100%; }
+.pg-narrow { width: 100%; max-width: 680px; margin-inline: auto; }
+.land-top { display: grid; gap: 18px; }
+.cardgrid { display: grid; gap: 18px; }
+.rcard, .tcard { align-content: start; }
+.room-cols { display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr); grid-template-areas: "stage" "side" "dock"; }
+.room-cols > .stage { grid-area: stage; }
+.room-side { grid-area: side; display: grid; gap: 18px; align-content: start; }
+.room-cols > .dock { grid-area: dock; }
+.nav-brand { display: none; }
+
+/* ---- tablet ---- */
+@media (min-width: 640px) {
+  body { padding-inline: max(24px, env(safe-area-inset-right, 0px)) max(24px, env(safe-area-inset-left, 0px)); }
+  .shell { max-width: 680px; padding-block: 24px 56px; gap: 22px; }
+  .shell:has(.appwrap), .shell:has(.pg-wide) { max-width: 900px; }
+  .appwrap, .pg-wide, .pg-narrow, .land-card, .room, .dash-main, .dash-side { gap: 22px; }
+  .nav-in, .qxbar { max-width: 560px; }
+  .tag { font-size: 46px; }
+  .ptitle { font-size: 36px; }
+  .hero { height: 200px; border-radius: 32px; }
+  .namecard { margin-inline: 24px; }
+  .cardgrid, .sec:has(> .rcard), .sec:has(> .tcard) { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: stretch; }
+  .sec:has(> .rcard) > .sec-h, .sec:has(> .tcard) > .sec-h { grid-column: 1 / -1; }
+  .dash-main .sec:has(> .rcard) { grid-template-columns: minmax(0, 1fr); }
+  .appwrap > .toolgrid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+  .chips { flex-wrap: wrap; overflow: visible; }
+  .steps { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+  .steps li { flex-direction: column; gap: 10px; }
+  .more { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+  .band { padding: 28px; }
+  .band .assure { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .band .btn.big { max-width: 360px; }
+  .sheet-root { align-items: center; padding: 24px; }
+  .sheet { max-width: 520px; max-height: 90%; border: 1px solid var(--line); border-radius: 26px; padding: 26px 26px 26px; }
+  .panel { max-height: 46dvh; }
+  .panel.tall { max-height: 58dvh; }
+  .moods { gap: 10px; }
+  .week { height: 110px; }
+}
+
+/* ---- wide tablet / small laptop ---- */
+@media (min-width: 760px) {
+  .dash { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 22px; align-items: start; }
+  .dash > .home-top { grid-column: 1 / -1; }
+  .dash .hello { font-size: 28px; }
+}
+
+/* ---- desktop ---- */
+@media (min-width: 960px) {
+  body:has(.nav) { padding-left: calc(232px + 32px); }
+  .shell:has(.appwrap), .shell:has(.pg-wide) { max-width: 1120px; }
+  .shell { padding-block: 32px 64px; }
+
+  /* bottom bar becomes a left sidebar */
+  .nav { top: 0; bottom: 0; right: auto; width: 232px; border-top: 0; border-right: 1px solid var(--line); padding: 28px 14px; display: flex; flex-direction: column; gap: 26px; }
+  .nav-brand { display: inline-flex; align-items: center; gap: 6px; padding-left: 10px; font-size: 26px; font-weight: 800; letter-spacing: -.03em; }
+  .nav-brand::after { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--sun); margin-top: 6px; }
+  .nav-in { max-width: none; flex-direction: column; gap: 4px; padding: 0; }
+  .nav a { display: flex; align-items: center; gap: 12px; justify-items: stretch; min-height: 48px; padding: 6px 10px; font-size: 15px; border-radius: 16px; }
+  .nav a:hover { background: var(--surface2); color: var(--ink); }
+  .nav a[aria-current="page"] { background: var(--surface2); }
+  .nav .nv { width: 36px; height: 36px; border-radius: 12px; font-size: 17px; }
+  .nav-spacer { display: none; }
+  .qxbar { left: 232px; right: 0; bottom: 0; max-width: 520px; border-radius: 16px 16px 0 0; }
+
+  .tag { font-size: 58px; }
+  .ptitle { font-size: 40px; }
+  .dash { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 28px; }
+  .cardgrid, .sec:has(> .rcard), .sec:has(> .tcard) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .shell:has(.pg-narrow) .cardgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .more { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .band .assure { grid-template-columns: repeat(4, minmax(0, 1fr)); align-items: start; }
+  .band .assure li { align-items: flex-start; }
+
+  /* landing: copy on the left, big pattern on the right */
+  .land { gap: 40px; }
+  .land-top { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); column-gap: 56px; row-gap: 22px; align-items: center; }
+  .land-top > .tag { grid-column: 1; grid-row: 1; align-self: end; }
+  .land-top > .land-card { grid-column: 1; grid-row: 2; align-self: start; }
+  .land-top > .hero { grid-column: 2; grid-row: 1 / 3; height: 100%; min-height: 420px; border-radius: 36px; --u: 56px; }
+  .land-card .namecard { margin: 0; box-shadow: 0 10px 30px -22px rgba(20,10,70,.5); }
+
+  /* live room: stage on the left, chat on the right */
+  .room-cols { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); grid-template-areas: "stage side" "dock side"; grid-template-rows: auto 1fr; align-items: start; column-gap: 28px; }
+  .room .panel { max-height: calc(100dvh - 360px); min-height: 280px; }
+  .room-side .tabs { max-width: 360px; }
+  .room .ptitle { font-size: 30px !important; }
+  .panel.tall { max-height: 62dvh; }
+}
+
+@media (min-width: 1400px) {
+  .shell:has(.appwrap), .shell:has(.pg-wide) { max-width: 1240px; }
+  .cardgrid, .sec:has(> .rcard), .sec:has(> .tcard) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

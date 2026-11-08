@@ -45,6 +45,7 @@ export default function Therapy() {
         </section>
       )}
       <Chips list={PRO_FILTERS} cur={filter} onPick={setFilter} />
+      <div className="cardgrid">
       {list.map((p) => (
         <article className={`tcard pal-${p.pal}`} key={p.id}>
           <span className="av" style={{ "--s": "56px", background: avatarVar(p.name) } as React.CSSProperties}>{initials(p.name)}</span>
@@ -60,6 +61,7 @@ export default function Therapy() {
           </div>
         </article>
       ))}
+      </div>
       {list.length === 0 && <p className="empty">No therapists for this topic yet.</p>}
       <p className="fine">Sample profiles and prices. Real therapists are verified before they appear.</p>
 

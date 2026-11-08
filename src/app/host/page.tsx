@@ -41,10 +41,10 @@ export default function Host() {
   if (!ready || !loaded) return <p className="muted">Loading…</p>;
   if (!staff) {
     return (
-      <>
+      <div className="pg-narrow">
         <div className="topbar"><Link className="wordmark display" href="/">Therapia</Link></div>
         <div className="card"><p>Host tools are for signed-in facilitators.</p><Link className="btn primary" href="/host/login">Facilitator sign-in</Link></div>
-      </>
+      </div>
     );
   }
 
@@ -56,7 +56,7 @@ export default function Host() {
   }
 
   return (
-    <>
+    <div className="pg-narrow">
       {toast}
       <div className="topbar"><Link className="wordmark display" href="/">Therapia</Link><button className="btn ghost sm" onClick={signOut}>Sign out</button></div>
       <div><h1 className="display ptitle">Host tools</h1><p className="muted">Signed in as {role}.</p></div>
@@ -84,7 +84,7 @@ export default function Host() {
       {rooms.map((r) => (
         <HostRoom key={r.id} room={r} sessions={sessions.filter((s) => s.room_id === r.id)} reload={load} say={say} />
       ))}
-    </>
+    </div>
   );
 }
 

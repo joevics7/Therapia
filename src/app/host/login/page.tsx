@@ -23,7 +23,7 @@ export default function HostLogin() {
   }
 
   return (
-    <>
+    <div className="pg-narrow">
       <div className="topbar"><Link className="wordmark display" href="/">Therapia</Link></div>
       <div><h1 className="display ptitle">Facilitator sign-in</h1><p className="muted">For verified group hosts. Listeners don&rsquo;t need to sign in.</p></div>
       <form className="card" onSubmit={submit}>
@@ -35,6 +35,6 @@ export default function HostLogin() {
         <button className="btn primary big" type="submit" disabled={busy}>{busy ? "Signing in…" : "Sign in"}</button>
       </form>
       <p className="fine">Facilitator accounts are created by the Therapia owner after verification.</p>
-    </>
+    </div>
   );
 }
