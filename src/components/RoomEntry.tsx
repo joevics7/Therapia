@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRoom } from "@/lib/hooks";
+import RequireAuth from "./RequireAuth";
 import { supabaseConfigured } from "@/lib/supabase";
 import ChatClient from "./ChatClient";
 import RoomClient from "./RoomClient";
@@ -14,5 +15,5 @@ function Gate({ id, children }: { id: string; children: (room: NonNullable<Retur
   return <>{children(room)}</>;
 }
 
-export const LiveRoomEntry = ({ id }: { id: string }) => <Gate id={id}>{(room) => <RoomClient room={room} />}</Gate>;
-export const ChatEntry = ({ id }: { id: string }) => <Gate id={id}>{(room) => <ChatClient room={room} />}</Gate>;
+export const LiveRoomEntry = ({ id }: { id: string }) => <RequireAuth><Gate id={id}>{(room) => <RoomClient room={room} />}</Gate></RequireAuth>;
+export const ChatEntry = ({ id }: { id: string }) => <RequireAuth><Gate id={id}>{(room) => <ChatClient room={room} />}</Gate></RequireAuth>;

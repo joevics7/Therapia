@@ -8,12 +8,10 @@ import GroupChat from "./GroupChat";
 
 /** The group's text chat, open any time. You need to be a member (women-only groups need the invite code once). */
 export default function ChatClient({ room }: { room: RoomDef }) {
-  const { ready, checked, authError, handle, member, needCode, busy, error, join } = useMembership(room.id);
+  const { ready, checked, username, member, needCode, busy, error, join } = useMembership(room.id);
   const [code, setCode] = useState("");
-
-  const problem = authError === "not_configured"
-    ? "Accounts aren't set up yet."
-    : authError ? "Your account couldn't start. Anonymous sign-ins may be switched off in Supabase." : "";
+  const [custom, setCustom] = useState("");
+  const [useCustom, setUseCustom] = useState(false);
 
   return (
     <div className="pg-narrow">
@@ -29,16 +27,18 @@ export default function ChatClient({ room }: { room: RoomDef }) {
       {!ready || !checked ? <p className="muted">Loading…</p> : member ? (
         <GroupChat roomId={room.id} alias={member.alias} isHost={member.isHost} />
       ) : (
-        <form className="card" onSubmit={(e) => { e.preventDefault(); join(code); }}>
-          <p>Join this group to read and write in its chat. You will appear as <b>{handle || "…"}</b>.</p>
+        <form className="card" onSubmit={(e) => { e.preventDefault(); join(code, useCustom ? custom : ""); }}>
+          <p>Join this group to read and write in its chat. You will appear as <b>{useCustom && custom.trim() ? custom.trim() : username || "…"}</b>.</p>
+          <label className="check"><input type="checkbox" checked={useCustom} onChange={(e) => setUseCustom(e.target.checked)} />Use a different name in this group</label>
+          {useCustom && <input className="field" value={custom} onChange={(e) => setCustom(e.target.value)} maxLength={32} placeholder="A name just for this group" aria-label="Name for this group" autoComplete="off" />}
           {needCode && (
             <label>
               <span className="eyebrow">Invite code</span>
               <input className="field" value={code} onChange={(e) => setCode(e.target.value)} autoCapitalize="characters" autoComplete="off" spellCheck={false} placeholder="From your group host" style={{ marginTop: 6 }} />
             </label>
           )}
-          {(problem || error) && <p className="err" role="alert">{problem || error}</p>}
-          <button className="btn primary big" type="submit" disabled={busy || !handle || !!problem}>{busy ? "Joining…" : "Join this group"}</button>
+          {error && <p className="err" role="alert">{error}</p>}
+          <button className="btn primary big" type="submit" disabled={busy}>{busy ? "Joining…" : "Join this group"}</button>
         </form>
       )}
     </div>

@@ -11,13 +11,13 @@ type Session = { id: string; room_id: string; starts_at: string; note: string | 
 type Report = { id: string; room_id: string; reason: string; body_snapshot: string | null; created_at: string };
 
 export default function Host() {
-  const { ready, isAnonymous, role, signOut } = useAuth();
+  const { ready, role, signOut } = useAuth();
   const { say, toast } = useToast();
   const [rooms, setRooms] = useState<RoomDef[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
   const [loaded, setLoaded] = useState(false);
-  const staff = !isAnonymous && role !== "listener";
+  const staff = role !== "listener";
 
   const load = useCallback(async () => {
     const sb = supabase();

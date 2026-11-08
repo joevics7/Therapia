@@ -1,114 +1,107 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { PageHead } from "@/components/ui";
-import { credentialsFor, generatePhrase, isRecoveryEmail, normalizePhrase, phraseValid } from "@/lib/recovery";
+import { authPost } from "@/lib/api";
+import { answerProblem, CUSTOM_QUESTION, passwordProblem, QUESTIONS, questionProblem } from "@/lib/identity";
 import { supabase } from "@/lib/supabase";
+import { useStored } from "@/lib/store";
+import { VoiceSettings } from "@/components/VoicePicker";
+import { isVoiceId, type VoiceId } from "@/lib/voice";
 
 export default function Account() {
-  const router = useRouter();
-  const { ready, session, isAnonymous, role, error, signOut } = useAuth();
-  const [phrase, setPhrase] = useState("");
-  const [written, setWritten] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState("");
-  const [restore, setRestore] = useState("");
-  const [copied, setCopied] = useState(false);
+  const { session, username, role, signOut } = useAuth();
+  const staff = role !== "listener";
 
-  const email = session?.user.email;
-  const backedUp = !isAnonymous && isRecoveryEmail(email);
-  const staff = !isAnonymous && !isRecoveryEmail(email);
+  const [cur, setCur] = useState("");
+  const [pw, setPw] = useState("");
+  const [pwMsg, setPwMsg] = useState("");
+  const [qSel, setQSel] = useState(QUESTIONS[0]);
+  const [qCustom, setQCustom] = useState("");
+  const [ans, setAns] = useState("");
+  const [qPw, setQPw] = useState("");
+  const [qMsg, setQMsg] = useState("");
+  const [busy, setBusy] = useState("");
 
-  async function activate() {
-    setBusy(true);
-    setMsg("");
-    try {
-      const c = await credentialsFor(phrase);
-      const { error: e } = await supabase().auth.updateUser({ email: c.email, password: c.password });
-      if (e) { setMsg(`Backup didn't start (${e.message}).`); return; }
-      await supabase().auth.refreshSession();
-      const { data } = await supabase().auth.getUser();
-      if (data.user?.is_anonymous) {
-        setMsg("Backup isn't active yet. The app owner needs to turn off email confirmation in Supabase Auth settings, then try again.");
-      } else {
-        setPhrase("");
-        setWritten(false);
-        setMsg("Backup is on. Keep your phrase safe.");
-      }
-    } finally {
-      setBusy(false);
-    }
-  }
+  const [voiceRaw, setVoice] = useStored<VoiceId>("voice", "natural");
+  const voice = isVoiceId(voiceRaw) ? voiceRaw : "natural";
+  const email = session?.user.email ?? "";
 
-  async function doRestore(e: React.FormEvent) {
+  async function changePassword(e: React.FormEvent) {
     e.preventDefault();
-    setMsg("");
-    if (!phraseValid(restore)) { setMsg("A recovery phrase has 6 words from the list. Check the spelling."); return; }
-    setBusy(true);
-    try {
-      const c = await credentialsFor(restore);
-      const { error: err } = await supabase().auth.signInWithPassword({ email: c.email, password: c.password });
-      if (err) { setMsg("That phrase didn't match an account."); return; }
-      router.push("/dashboard");
-    } finally {
-      setBusy(false);
-    }
+    const p = passwordProblem(pw);
+    if (p) { setPwMsg(p); return; }
+    setBusy("pw"); setPwMsg("");
+    const check = await supabase().auth.signInWithPassword({ email, password: cur });
+    if (check.error) { setBusy(""); setPwMsg("Your current password didn't match."); return; }
+    const { error } = await supabase().auth.updateUser({ password: pw });
+    setBusy("");
+    if (error) { setPwMsg("Couldn't change it. Try again."); return; }
+    setCur(""); setPw(""); setPwMsg("Password changed.");
   }
 
-  const copy = async () => {
-    try { await navigator.clipboard.writeText(phrase); setCopied(true); } catch { setMsg("Couldn't copy. Please write the words down."); }
-  };
+  async function changeQuestion(e: React.FormEvent) {
+    e.preventDefault();
+    const q = qSel === CUSTOM_QUESTION ? qCustom : qSel;
+    const p = questionProblem(q) || answerProblem(ans);
+    if (p) { setQMsg(p); return; }
+    setBusy("q"); setQMsg("");
+    const r = await authPost<{ message?: string }>("/api/auth/recovery", { password: qPw, question: q, answer: ans });
+    setBusy("");
+    if (!r.ok) { setQMsg(r.data.message ?? "Couldn't save. Try again."); return; }
+    setAns(""); setQPw(""); setQMsg("Security question saved.");
+  }
 
-  if (!ready) return <p className="muted">Loading…</p>;
-  if (error) return (<><PageHead title="Account" /><div className="card"><p className="err">{error === "not_configured" ? "Accounts aren't set up yet." : "Your account couldn't start. Anonymous sign-ins may be switched off in Supabase."}</p></div></>);
 
   return (
     <div className="pg-narrow">
-      <PageHead title="Account" sub="No email. No phone number." />
+      <PageHead title="Account" sub={username ? `Signed in as ${username}` : "Signed in"} />
 
-      {staff ? (
+      {staff && (
         <div className="card">
           <p>You are signed in as a <b>{role}</b>.</p>
-          <div className="row"><Link className="btn primary sm" href="/host">Host tools</Link><button className="btn ghost sm" onClick={signOut}>Sign out</button></div>
+          <div className="row"><Link className="btn primary sm" href="/host">Host tools</Link></div>
         </div>
-      ) : backedUp ? (
-        <div className="card">
-          <p><b>Backup is on.</b> Your 6-word phrase restores this account on a new phone. If you lose it, nobody can recover the account, not even us.</p>
-        </div>
-      ) : (
-        <section className="card">
-          <h2 className="sec-h display">Back up this account</h2>
-          <p className="muted">Right now your account lives only on this phone. A recovery phrase lets you get it back on another phone. Bookings and saved items come with it.</p>
-          {!phrase ? (
-            <button className="btn primary" onClick={() => { setPhrase(generatePhrase()); setWritten(false); setCopied(false); setMsg(""); }}>Create my phrase</button>
-          ) : (
-            <div className="stack">
-              <ol className="phrase" aria-label="Your recovery phrase">{phrase.split(" ").map((w, i) => <li key={i}>{w}</li>)}</ol>
-              <div className="row"><button className="btn ghost sm" onClick={copy}>{copied ? "Copied ✓" : "Copy"}</button><button className="btn ghost sm" onClick={() => setPhrase(generatePhrase())}>New words</button></div>
-              <p className="fine">Write these words down in order and keep them private. Anyone with them can open your account. We can&rsquo;t show them again.</p>
-              <label className="check"><input type="checkbox" checked={written} onChange={(e) => setWritten(e.target.checked)} />I have written my phrase down</label>
-              <button className="btn primary" disabled={!written || busy} onClick={activate}>{busy ? "Turning on…" : "Turn on backup"}</button>
-            </div>
-          )}
-        </section>
       )}
+
+      {username && (
+        <div className="card">
+          <h2 className="sec-h display">Your name</h2>
+          <p>In groups you appear as <b>{username}</b> by default. When you join a group you can pick a different name just for it, so people can&rsquo;t connect your groups.</p>
+        </div>
+      )}
+
+      <VoiceSettings value={voice} onChange={setVoice} />
 
       {!staff && (
-        <form className="card" onSubmit={doRestore}>
-          <h2 className="sec-h display">Already have a phrase?</h2>
-          <p className="muted">Enter it to open your account on this phone. This replaces the account currently on this phone.</p>
-          <label htmlFor="restore" className="eyebrow">Your 6 words</label>
-          <input id="restore" className="field" value={restore} onChange={(e) => setRestore(e.target.value)} autoComplete="off" autoCapitalize="none" spellCheck={false} placeholder="word word word word word word" />
-          {restore && !phraseValid(restore) && <p className="fine">{normalizePhrase(restore).split(" ").filter(Boolean).length} of 6 words</p>}
-          <button className="btn ghost" type="submit" disabled={busy || !restore.trim()}>Restore my account</button>
-        </form>
+        <>
+          <form className="card" onSubmit={changePassword}>
+            <h2 className="sec-h display">Change password</h2>
+            <input className="field" type="password" value={cur} onChange={(e) => setCur(e.target.value)} autoComplete="current-password" placeholder="Current password" aria-label="Current password" />
+            <input className="field" type="password" value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="new-password" placeholder="New password" aria-label="New password" />
+            {pwMsg && <p className={pwMsg === "Password changed." ? "notice" : "err"} role="status">{pwMsg}</p>}
+            <button className="btn ghost" type="submit" disabled={busy === "pw" || !cur || !pw}>Change password</button>
+          </form>
+
+          <form className="card" onSubmit={changeQuestion}>
+            <h2 className="sec-h display">Security question</h2>
+            <p className="muted">If you forget your password, this lets you set a new one.</p>
+            <select className="field" value={qSel} onChange={(e) => setQSel(e.target.value)} aria-label="Security question">
+              {[...QUESTIONS, CUSTOM_QUESTION].map((q) => <option key={q}>{q}</option>)}
+            </select>
+            {qSel === CUSTOM_QUESTION && <input className="field" value={qCustom} onChange={(e) => setQCustom(e.target.value)} maxLength={120} placeholder="Your question" aria-label="Your own question" />}
+            <input className="field" value={ans} onChange={(e) => setAns(e.target.value)} autoComplete="off" placeholder="Your answer" aria-label="Your answer" />
+            <input className="field" type="password" value={qPw} onChange={(e) => setQPw(e.target.value)} autoComplete="current-password" placeholder="Current password, to confirm" aria-label="Current password" />
+            {qMsg && <p className={qMsg === "Security question saved." ? "notice" : "err"} role="status">{qMsg}</p>}
+            <button className="btn ghost" type="submit" disabled={busy === "q" || !ans || !qPw}>Save question</button>
+          </form>
+        </>
       )}
 
-      {msg && <p className="notice" role="status">{msg}</p>}
-      <p className="fine">Your mood log and journal stay on this phone only. They are not part of the backup.</p>
+      <button className="btn ghost" onClick={signOut}>Sign out</button>
+      <p className="fine">Your mood log and journal stay on this device only. They are not part of your account.</p>
     </div>
   );
 }

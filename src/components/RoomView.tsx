@@ -3,7 +3,11 @@
 import { useLocalParticipant, useParticipants, useRoomContext } from "@livekit/components-react";
 import { type Participant, RoomEvent } from "livekit-client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Track, createLocalAudioTrack, type LocalAudioTrack } from "livekit-client";
 import { authPost } from "@/lib/api";
+import { VoicePicker } from "./VoicePicker";
+import { useStored } from "@/lib/store";
+import { VoiceProcessor, isVoiceId, type VoiceId } from "@/lib/voice";
 import { MAX_SPEAKERS, type RoomDef } from "@/lib/rooms";
 import { avatarVar, initials } from "@/lib/session";
 import GroupChat from "./GroupChat";
@@ -32,6 +36,9 @@ export default function RoomView({ room, host, alias, token, onLeave }: Props) {
   const [hands, setHands] = useState<Hand[]>([]);
   const [myHand, setMyHand] = useState(false);
   const [toast, setToast] = useState("");
+  const [voiceRaw, setVoice] = useStored<VoiceId>("voice", "natural");
+  const voice: VoiceId = isVoiceId(voiceRaw) ? voiceRaw : "natural";
+  const proc = useRef<VoiceProcessor | null>(null);
   const toastT = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const say = useCallback((m: string) => {
@@ -103,10 +110,36 @@ export default function RoomView({ room, host, alias, token, onLeave }: Props) {
     if (next) say("Hand raised. The host will see it.");
   }
 
+  // The voice effect is attached BEFORE the track is published, so your natural voice is never sent by mistake.
   async function toggleMic() {
-    try { await localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled); }
-    catch { say("Couldn't reach your microphone. Check your browser's permission."); }
+    try {
+      if (isMicrophoneEnabled) {
+        await localParticipant.setMicrophoneEnabled(false);
+        proc.current = null;
+        return;
+      }
+      const track: LocalAudioTrack = await createLocalAudioTrack();
+      if (voice !== "natural") {
+        const p = new VoiceProcessor(voice);
+        try { await track.setProcessor(p); proc.current = p; }
+        catch { track.stop(); say("Your voice effect couldn't start, so the mic stayed off."); return; }
+      }
+      await localParticipant.publishTrack(track, { source: Track.Source.Microphone });
+    } catch { say("Couldn't reach your microphone. Check your browser's permission."); }
   }
+
+  // Changing the voice while speaking updates the live effect.
+  useEffect(() => {
+    const pub = localParticipant.getTrackPublication(Track.Source.Microphone);
+    const track = pub?.track as LocalAudioTrack | undefined;
+    if (!track) return;
+    const cur = track.getProcessor();
+    if (cur instanceof VoiceProcessor) { cur.setVoice(voice); return; }
+    if (voice !== "natural") {
+      const p = new VoiceProcessor(voice);
+      track.setProcessor(p).then(() => { proc.current = p; }).catch(() => {});
+    }
+  }, [voice, localParticipant, isMicrophoneEnabled]);
 
   async function stepDown() {
     await localParticipant.setMicrophoneEnabled(false).catch(() => {});
@@ -188,6 +221,8 @@ export default function RoomView({ room, host, alias, token, onLeave }: Props) {
       </div>
 
       <div className="dock">
+        <div className="eyebrow">Your voice</div>
+        <VoicePicker value={voice} onChange={setVoice} />
         <div className="act-row">
           {canSpeak ? (
             <>

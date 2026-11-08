@@ -1,23 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { avatarVar, getHandle, initials, newHandle, setHandle } from "@/lib/session";
+import { useAuth } from "@/components/AuthProvider";
+import { avatarVar, initials } from "@/lib/session";
 
 const TOPICS: [string, string][] = [["Marriage & abuse", "b"], ["Betting", "a"], ["Addiction", "e"], ["Grief", "d"], ["Stress & money", "c"]];
 
 export default function Landing() {
-  const [handle, setH] = useState("");
+  const { ready, session, username } = useAuth();
+  const signedIn = ready && !!session;
+  const name = username ?? "friend";
 
-  useEffect(() => {
-    const saved = getHandle();
-    const h = saved || newHandle();
-    if (!saved) setHandle(h);
-    setH(h);
-  }, []);
-
-  const reroll = () => { const h = newHandle(handle); setHandle(h); setH(h); };
-  const enter = <Link className="btn primary big" href="/dashboard">Enter as {handle || "…"}</Link>;
+  const enter = signedIn
+    ? <Link className="btn primary big" href="/dashboard">Enter as {name}</Link>
+    : <Link className="btn primary big" href="/login?mode=up">Create your name</Link>;
 
   return (
     <div className="pg-wide land">
@@ -26,16 +22,23 @@ export default function Landing() {
       <h1 className="tag display">Say it out loud. Nobody has to know it&rsquo;s you.</h1>
       <div className="hero ankara pal-a" aria-hidden="true" />
       <div className="land-card">
-      <div className="namecard">
-        <span className="av" style={{ "--s": "72px", background: avatarVar(handle || "x") } as React.CSSProperties}>{initials(handle)}</span>
-        <div className="nc-text"><div className="eyebrow">Your name here</div><div className="handle display">{handle || " "}</div></div>
-        <button className="btn ghost sm" onClick={reroll}>Another name</button>
-      </div>
+      {signedIn ? (
+        <div className="namecard">
+          <span className="av" style={{ "--s": "72px", background: avatarVar(name) } as React.CSSProperties}>{initials(name)}</span>
+          <div className="nc-text"><div className="eyebrow">Welcome back</div><div className="handle display">{name}</div></div>
+        </div>
+      ) : (
+        <div className="namecard">
+          <span className="av" style={{ "--s": "72px", background: "var(--av1)" } as React.CSSProperties}>?</span>
+          <div className="nc-text"><div className="eyebrow">Your name here</div><div className="handle display">Pick any username</div></div>
+        </div>
+      )}
       {enter}
+      {!signedIn && <Link className="btn ghost big" href="/login">I already have a name</Link>}
       <ul className="assure">
         <li><span className="ic">✓</span>No email. No phone number.</li>
         <li><span className="ic">✓</span>Audio is never recorded.</li>
-        <li><span className="ic">✓</span>Pick a new name any time.</li>
+        <li><span className="ic">✓</span>Use a different name in any group.</li>
       </ul>
       </div>
       </div>
@@ -43,7 +46,7 @@ export default function Landing() {
       <section className="sec">
         <h2 className="sec-h display">How it works</h2>
         <ol className="steps">
-          <li><span className="sn">1</span><div><b>Pick a name</b><span className="muted">We give you a random one. No email, no phone.</span></div></li>
+          <li><span className="sn">1</span><div><b>Pick a name</b><span className="muted">A username and a password. No email, no phone.</span></div></li>
           <li><span className="sn">2</span><div><b>Join a room</b><span className="muted">Free voice rooms every week, by topic.</span></div></li>
           <li><span className="sn">3</span><div><b>Listen or speak</b><span className="muted">Stay quiet as long as you like. Raise your hand when you are ready.</span></div></li>
         </ol>
@@ -76,7 +79,7 @@ export default function Landing() {
         </ul>
         {enter}
       </section>
-      <p className="fine"><Link href="/host/login">Facilitator sign-in</Link> · <Link href="/account">Restore my account</Link></p>
+      <p className="fine"><Link href="/host/login">Facilitator sign-in</Link> · <Link href="/forgot">Forgot password?</Link></p>
     </div>
   );
 }

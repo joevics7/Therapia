@@ -6,7 +6,7 @@ import { HelpSheet } from "@/components/ui";
 import { AFFIRM, MOODS, MOOD_MSG, TOOLS } from "@/lib/data";
 import { useRooms } from "@/lib/hooks";
 import { useAuth } from "@/components/AuthProvider";
-import { avatarVar, getHandle, initials, newHandle, setHandle } from "@/lib/session";
+import { avatarVar, initials } from "@/lib/session";
 import { dayKey, useStored } from "@/lib/store";
 
 const MOOD_COLORS = ["#F0668A", "#F59A4B", "#F4C84B", "#8FD16B", "#43C48A"];
@@ -23,18 +23,15 @@ function Face({ i }: { i: number }) {
 }
 
 export default function Dashboard() {
-  const [handle, setH] = useState("");
   const [help, setHelp] = useState(false);
   const [log, setLog] = useStored<Record<string, number>>("moods", {});
   const [aff, setAff] = useState(0);
   const [live, setLive] = useState<Record<string, number>>({});
   const rooms = useRooms();
-  const { isAnonymous, error: authError } = useAuth();
+  const { username } = useAuth();
+  const handle = username ?? "friend";
 
   useEffect(() => {
-    let h = getHandle();
-    if (!h) { h = newHandle(); setHandle(h); }
-    setH(h);
     fetch("/api/rooms", { cache: "no-store" }).then((r) => r.json()).then((d) => setLive(d.live ?? {})).catch(() => {});
   }, []);
 
@@ -106,12 +103,6 @@ export default function Dashboard() {
       )}
       <Link className="btn ghost" href="/groups">All groups →</Link>
 
-      {isAnonymous && !authError && (
-        <section className="notice">
-          <b>Keep your data safe.</b> Your account lives on this phone. Make a recovery phrase to get it back on a new phone, with no email or number.
-          <div className="row" style={{ marginTop: 10 }}><Link className="btn primary sm" href="/account">Set up recovery</Link></div>
-        </section>
-      )}
 
       </div>
       <div className="dash-side">
