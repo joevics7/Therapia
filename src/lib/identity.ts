@@ -27,8 +27,18 @@ export const QUESTIONS = [
   "What was your childhood nickname?",
   "What was the name of your first pet?",
   "What is the name of your best childhood friend?",
+  "What was your first job?",
+  "What is the name of your favourite teacher?",
 ];
 export const CUSTOM_QUESTION = "Write my own question";
 
+export const normText = (s: string) => s.trim().replace(/\s+/g, " ").toLowerCase();
 export const questionProblem = (q: string) => (q.trim().length < 5 || q.trim().length > 120 ? "Use a question of 5 to 120 characters." : null);
-export const answerProblem = (a: string) => (a.trim().length < 3 ? "The answer needs at least 3 characters." : null);
+export const answerProblem = (a: string) => (a.trim().length < 3 ? "Each answer needs at least 3 characters." : null);
+
+/** Both questions and both answers, checked together. */
+export function recoveryProblem(q1: string, a1: string, q2: string, a2: string): string | null {
+  return questionProblem(q1) || questionProblem(q2)
+    || (normText(q1) === normText(q2) ? "Pick two different questions." : null)
+    || answerProblem(a1) || answerProblem(a2);
+}

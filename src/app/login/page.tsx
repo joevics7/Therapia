@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { createAccount, safeNext, signInWithUsername } from "@/lib/auth-actions";
-import { answerProblem, CUSTOM_QUESTION, passwordProblem, QUESTIONS, questionProblem, usernameProblem } from "@/lib/identity";
+import RecoveryFields, { emptyRecovery, toRecovery } from "@/components/RecoveryFields";
+import { passwordProblem, recoveryProblem, usernameProblem } from "@/lib/identity";
 
 function Login() {
   const router = useRouter();
@@ -14,9 +15,7 @@ function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
-  const [qSel, setQSel] = useState(QUESTIONS[0]);
-  const [qCustom, setQCustom] = useState("");
-  const [answer, setAnswer] = useState("");
+  const [rec, setRec] = useState(emptyRecovery());
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [next, setNext] = useState("/dashboard");
@@ -28,18 +27,17 @@ function Login() {
   }, []);
   useEffect(() => { if (ready && session) router.replace(next); }, [ready, session, next, router]);
 
-  const question = qSel === CUSTOM_QUESTION ? qCustom : qSel;
-
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setErr("");
     if (mode === "up") {
-      const p = usernameProblem(username) || passwordProblem(password) || questionProblem(question) || answerProblem(answer);
+      const r = toRecovery(rec);
+      const p = usernameProblem(username) || passwordProblem(password) || recoveryProblem(r.q1, r.a1, r.q2, r.a2);
       if (p) { setErr(p); return; }
     } else if (!username.trim() || !password) { setErr("Enter your username and password."); return; }
     setBusy(true);
     const r = mode === "up"
-      ? await createAccount({ username: username.trim(), password, question: question.trim(), answer })
+      ? await createAccount({ username: username.trim(), password, ...toRecovery(rec) })
       : await signInWithUsername(username.trim(), password);
     setBusy(false);
     if (r) setErr(r);
@@ -71,25 +69,15 @@ function Login() {
 
         {mode === "up" && (
           <>
-            <div className="notice"><b>If you forget your password</b>, a security question lets you set a new one. Pick a question only you can answer.</div>
-            <label className="stack">
-              <span className="eyebrow">Security question</span>
-              <select className="field" value={qSel} onChange={(e) => setQSel(e.target.value)}>
-                {[...QUESTIONS, CUSTOM_QUESTION].map((q) => <option key={q}>{q}</option>)}
-              </select>
-            </label>
-            {qSel === CUSTOM_QUESTION && <input className="field" value={qCustom} onChange={(e) => setQCustom(e.target.value)} maxLength={120} placeholder="Your question" aria-label="Your own question" />}
-            <label className="stack">
-              <span className="eyebrow">Your answer</span>
-              <input className="field" value={answer} onChange={(e) => setAnswer(e.target.value)} autoComplete="off" />
-            </label>
-            <p className="fine">Write your username down somewhere safe. If you forget it, we can&rsquo;t look it up, because we don&rsquo;t know who you are.</p>
+            <div className="notice"><b>Two security questions</b> are how you get back in if you forget your password or your username. Pick questions only you can answer, and answers you will remember.</div>
+            <RecoveryFields value={rec} onChange={setRec} />
+            <p className="fine">Write your username down too. If you forget it, your two answers can find it again.</p>
           </>
         )}
 
         {(err || authError === "not_configured") && <p className="err" role="alert">{err || "Accounts aren't set up yet."}</p>}
         <button className="btn primary big" type="submit" disabled={busy || authError === "not_configured"}>{busy ? "One moment…" : mode === "in" ? "Sign in" : "Create account"}</button>
-        {mode === "in" && <p className="fine"><Link href="/forgot">Forgot your password?</Link></p>}
+        {mode === "in" && <p className="fine"><Link href="/forgot">Forgot your password?</Link> · <Link href="/forgot?find=1">Forgot your username?</Link></p>}
       </form>
       <p className="fine"><Link href="/host/login">Facilitator sign-in</Link></p>
     </div>

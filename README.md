@@ -3,7 +3,7 @@
 Anonymous voice support groups, one-on-one therapy and self-help tools for Nigeria, then Africa.
 
 ## What works
-- **Username + password accounts** (Supabase). No email or phone. A **security question** lets someone set a new password if they forget it. People pick how anonymous to be: they appear as their username by default, or type another name for any single group.
+- **Username + password accounts** (Supabase). No email or phone. **Two security questions** (both answers needed) let someone set a new password, or find a forgotten username from the two answers. People pick how anonymous to be: they appear as their username by default, or type another name for any single group.
 - **Voice effects** (Deeper, Higher, Bass boost, Robot). They run on the speaker's own device and are applied before the audio is published, so the natural voice is never sent.
 - **Groups** from the database, with live status and listener counts (LiveKit), schedules and reminders.
 - **Live audio rooms** (LiveKit): host speaks, listeners raise a hand, host invites, step down, mute, remove, end. Audio is never recorded.
@@ -33,7 +33,7 @@ Use `role = 'admin'` for yourself to manage every group.
 
 ## Privacy design
 - In a group a person appears by their **username** (default) or a **custom name** for that group. Behind the scenes each membership still has a random alias that chat and audio use, so hosts never see account ids. Custom names can't copy another user's username or pose as staff.
-- Security answers are stored only as bcrypt hashes, 5 tries per hour per username, and are reachable only from the server.
+- Security answers are stored only as bcrypt hashes, 5 tries per hour per username, and are reachable only from the server. To find a forgotten username, the server makes a keyed hash of the two answers (key: `RECOVERY_PEPPER`, or the service-role key if unset) and the database only ever sees that hash. If two accounts share the same answers, the person is also asked for the month they joined.
 - No device ID is stored.
 - Listeners are never asked for personal details. Hosts can't see user ids; reports hide who reported.
 - Only the database decides who is a member or host. The shared host key and shared women-only code are gone.
@@ -55,7 +55,7 @@ The Need help now button (every app screen, and inside live rooms and group chat
 
 ## Known gaps
 - Payments are not implemented; bookings are requests. Therapists and library items are samples in `src/lib/data.ts`.
-- A forgotten **username** can't be recovered (there is no email or phone to look it up by). The sign-up screen tells people to write it down.
-- Security questions are weaker than a recovery code. If you want a stronger option later, add a 6-word code shown once at sign-up.
+- Security questions are weaker than a recovery code, and answers can be guessed by someone who knows the person. A 6-word code shown once at sign-up could be added later as a stronger option.
+- Changing `RECOVERY_PEPPER` (or the service-role key if the pepper is unset) stops username lookup working for existing accounts. Password recovery is not affected.
 - Voice effects are a disguise, not a guarantee. They make a voice harder to recognise but not impossible.
 - Helpline numbers were verified from public directories on 9 Nov 2026. Confirm them with each organisation before launch; ask SURPIN or MANI whether they will accept referrals from Therapia hosts.

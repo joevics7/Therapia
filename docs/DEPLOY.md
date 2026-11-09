@@ -9,6 +9,7 @@ Vercel > Add New > Project > import `joevics7/Therapia`. Framework: Next.js (aut
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase > Project Settings > API | yes |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | the publishable key | yes |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase > Project Settings > API (service_role) | **NO. Server only.** Never add `NEXT_PUBLIC_` to it |
+| `RECOVERY_PEPPER` | optional random string (32+ characters). Set once, never change | **NO. Server only** |
 | `LIVEKIT_URL` | LiveKit Cloud project, `wss://…livekit.cloud` | server |
 | `LIVEKIT_API_KEY` | LiveKit Cloud | server |
 | `LIVEKIT_API_SECRET` | LiveKit Cloud | server |
@@ -25,7 +26,7 @@ Set them for Production and Preview, then redeploy (public values are baked in a
 
 ## 4. After the first deploy: a 10-minute check
 1. Create an account, sign out, sign in again.
-2. Forgot password: answer the question, set a new password.
+2. Forgot password: answer both questions, set a new password. Then try Forgot username with the two answers.
 3. Join a group with a custom name, then send a chat message.
 4. Open the live room on two phones, one as a host account. Speak with a voice effect on and check the other phone hears the changed voice.
 5. Open Need help now and tap one number on a phone to confirm it dials.

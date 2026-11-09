@@ -26,3 +26,14 @@ export function clientKey(req: Request): string {
   const salt = process.env.SUPABASE_SERVICE_ROLE_KEY || "therapia";
   return createHmac("sha256", salt).update(ip).digest("hex").slice(0, 32);
 }
+
+/**
+ * Keyed hash of the two answers (order does not matter). Used only to find a forgotten username.
+ * The key stays on the app server and never reaches the database.
+ */
+export function lookupKey(a1: string, a2: string): string {
+  const pepper = process.env.RECOVERY_PEPPER || process.env.SUPABASE_SERVICE_ROLE_KEY || "therapia";
+  const norm = (s: string) => s.trim().replace(/\s+/g, " ").toLowerCase();
+  const joined = [norm(a1), norm(a2)].sort().join("\u0000");
+  return createHmac("sha256", pepper).update(joined).digest("hex");
+}

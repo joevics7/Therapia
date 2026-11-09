@@ -11,7 +11,7 @@ export async function signInWithUsername(username: string, password: string): Pr
 }
 
 /** Create an account, then sign in. Returns an error message, or null on success. */
-export async function createAccount(b: { username: string; password: string; question: string; answer: string }): Promise<string | null> {
+export async function createAccount(b: { username: string; password: string; q1: string; a1: string; q2: string; a2: string }): Promise<string | null> {
   let res: Response;
   try {
     res = await fetch("/api/auth/signup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) });

@@ -5,7 +5,8 @@ import { useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { PageHead } from "@/components/ui";
 import { authPost } from "@/lib/api";
-import { answerProblem, CUSTOM_QUESTION, passwordProblem, QUESTIONS, questionProblem } from "@/lib/identity";
+import RecoveryFields, { emptyRecovery, toRecovery } from "@/components/RecoveryFields";
+import { passwordProblem, recoveryProblem } from "@/lib/identity";
 import { supabase } from "@/lib/supabase";
 import { useStored } from "@/lib/store";
 import { VoiceSettings } from "@/components/VoicePicker";
@@ -18,9 +19,7 @@ export default function Account() {
   const [cur, setCur] = useState("");
   const [pw, setPw] = useState("");
   const [pwMsg, setPwMsg] = useState("");
-  const [qSel, setQSel] = useState(QUESTIONS[0]);
-  const [qCustom, setQCustom] = useState("");
-  const [ans, setAns] = useState("");
+  const [rec, setRec] = useState(emptyRecovery());
   const [qPw, setQPw] = useState("");
   const [qMsg, setQMsg] = useState("");
   const [busy, setBusy] = useState("");
@@ -44,16 +43,15 @@ export default function Account() {
 
   async function changeQuestion(e: React.FormEvent) {
     e.preventDefault();
-    const q = qSel === CUSTOM_QUESTION ? qCustom : qSel;
-    const p = questionProblem(q) || answerProblem(ans);
+    const r = toRecovery(rec);
+    const p = recoveryProblem(r.q1, r.a1, r.q2, r.a2);
     if (p) { setQMsg(p); return; }
     setBusy("q"); setQMsg("");
-    const r = await authPost<{ message?: string }>("/api/auth/recovery", { password: qPw, question: q, answer: ans });
+    const res = await authPost<{ message?: string }>("/api/auth/recovery", { password: qPw, ...r });
     setBusy("");
-    if (!r.ok) { setQMsg(r.data.message ?? "Couldn't save. Try again."); return; }
-    setAns(""); setQPw(""); setQMsg("Security question saved.");
+    if (!res.ok) { setQMsg(res.data.message ?? "Couldn't save. Try again."); return; }
+    setRec(emptyRecovery()); setQPw(""); setQMsg("Security questions saved.");
   }
-
 
   return (
     <div className="pg-narrow">
@@ -86,16 +84,12 @@ export default function Account() {
           </form>
 
           <form className="card" onSubmit={changeQuestion}>
-            <h2 className="sec-h display">Security question</h2>
-            <p className="muted">If you forget your password, this lets you set a new one.</p>
-            <select className="field" value={qSel} onChange={(e) => setQSel(e.target.value)} aria-label="Security question">
-              {[...QUESTIONS, CUSTOM_QUESTION].map((q) => <option key={q}>{q}</option>)}
-            </select>
-            {qSel === CUSTOM_QUESTION && <input className="field" value={qCustom} onChange={(e) => setQCustom(e.target.value)} maxLength={120} placeholder="Your question" aria-label="Your own question" />}
-            <input className="field" value={ans} onChange={(e) => setAns(e.target.value)} autoComplete="off" placeholder="Your answer" aria-label="Your answer" />
+            <h2 className="sec-h display">Security questions</h2>
+            <p className="muted">Two questions get you back in if you forget your password or your username. Saving replaces your old ones.</p>
+            <RecoveryFields value={rec} onChange={setRec} />
             <input className="field" type="password" value={qPw} onChange={(e) => setQPw(e.target.value)} autoComplete="current-password" placeholder="Current password, to confirm" aria-label="Current password" />
-            {qMsg && <p className={qMsg === "Security question saved." ? "notice" : "err"} role="status">{qMsg}</p>}
-            <button className="btn ghost" type="submit" disabled={busy === "q" || !ans || !qPw}>Save question</button>
+            {qMsg && <p className={qMsg === "Security questions saved." ? "notice" : "err"} role="status">{qMsg}</p>}
+            <button className="btn ghost" type="submit" disabled={busy === "q" || !rec.a1 || !rec.a2 || !qPw}>Save questions</button>
           </form>
         </>
       )}
