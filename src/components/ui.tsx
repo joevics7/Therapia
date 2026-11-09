@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { EMERGENCY, HELP_CHECKED, HELP_GROUPS } from "@/lib/help";
 import { useQuickExit } from "./QuickExit";
 
 export function useToast() {
@@ -32,9 +33,21 @@ export function HelpSheet({ onClose }: { onClose: () => void }) {
   return (
     <Sheet onClose={onClose}>
       <h3 className="display">You are not alone</h3>
-      <p>If you or someone near you is in danger right now, contact emergency services or go to someone you trust nearby.</p>
-      <div className="placeholder">Placeholder: verified Nigerian helpline numbers go here before launch.</div>
-      <button className="btn primary big" onClick={onClose}>Close</button>
+      <p>If you or someone near you is in danger right now, call emergency services or go to someone you trust nearby.</p>
+      <a className="btn primary big" href={`tel:${EMERGENCY.number}`}>Call {EMERGENCY.number} · {EMERGENCY.name}</a>
+      {HELP_GROUPS.map((g) => (
+        <div className="helpgrp" key={g.title}>
+          <div className="eyebrow">{g.title}</div>
+          {g.lines.map((l) => (
+            <a className="helpline" key={l.number} href={`tel:${l.number}`}>
+              <span><b>{l.name}</b><span className="fine">{l.note}</span></span>
+              <span className="num">{l.number}</span>
+            </a>
+          ))}
+        </div>
+      ))}
+      <p className="fine">Numbers last checked {HELP_CHECKED}. If one doesn&rsquo;t answer, try another. Calling is the quickest way to reach a person.</p>
+      <button className="btn ghost big" onClick={onClose}>Close</button>
     </Sheet>
   );
 }

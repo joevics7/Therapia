@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { HelpSheet } from "./ui";
 import { useState } from "react";
 import { useMembership } from "@/lib/join";
 import type { RoomDef } from "@/lib/rooms";
@@ -12,13 +13,15 @@ export default function ChatClient({ room }: { room: RoomDef }) {
   const [code, setCode] = useState("");
   const [custom, setCustom] = useState("");
   const [useCustom, setUseCustom] = useState(false);
+  const [help, setHelp] = useState(false);
 
   return (
     <div className="pg-narrow">
       <div className="topbar">
         <Link className="btn ghost sm" href="/groups">← Groups</Link>
-        <Link className="btn accent sm" href={`/room/${room.id}`}>Go to live room</Link>
+        <span className="row"><button className="pill-help" onClick={() => setHelp(true)}>♥ Help</button><Link className="btn accent sm" href={`/room/${room.id}`}>Go to live room</Link></span>
       </div>
+      {help && <HelpSheet onClose={() => setHelp(false)} />}
       <div>
         <div className="rc-cat">{room.cat}{room.women ? " · Women only" : ""}</div>
         <h1 className="display ptitle" style={{ fontSize: 26 }}>{room.title}</h1>

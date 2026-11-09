@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { adminClient } from "@/lib/admin";
+import { clientKey } from "@/lib/server";
 import { answerProblem, emailFor, passwordProblem, questionProblem, usernameProblem } from "@/lib/identity";
 
 export const dynamic = "force-dynamic";
@@ -9,6 +10,8 @@ const fail = (error: string, status: number, message?: string) => NextResponse.j
 export async function POST(req: Request) {
   const sb = adminClient();
   if (!sb) return fail("not_configured", 503, "Sign-up isn't set up yet.");
+  const allowed = await sb.rpc("rate_allow", { p_key: `signup:${clientKey(req)}`, p_max: 20, p_window_secs: 3600 });
+  if (allowed.data === false) return fail("rate_limited", 429, "Too many sign-ups from this connection. Please try again later.");
   let b: { username?: string; password?: string; question?: string; answer?: string };
   try { b = await req.json(); } catch { return fail("bad_request", 400); }
   const username = (b.username ?? "").trim();

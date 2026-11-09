@@ -36,7 +36,10 @@ export async function POST(req: Request) {
     // Everything else is for the group's host (or an admin), decided by the database.
     const jwt = bearer(req);
     if (!jwt) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
-    const { data: isHost } = await userClient(jwt).rpc("is_room_host", { p_room: roomId });
+    const uc = userClient(jwt);
+    const { data: ok } = await uc.rpc("rate_allow_me", { p_action: "room-control", p_max: 120, p_window_secs: 60 });
+    if (ok === false) return NextResponse.json({ error: "Slow down a little." }, { status: 429 });
+    const { data: isHost } = await uc.rpc("is_room_host", { p_room: roomId });
     if (isHost !== true) return NextResponse.json({ error: "Only the host can do that." }, { status: 403 });
 
     const identity = String(b.identity ?? "");

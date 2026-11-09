@@ -326,3 +326,12 @@ button, input { font: inherit; color: inherit; }
   .shell:has(.appwrap), .shell:has(.pg-wide) { max-width: 1240px; }
   .cardgrid, .sec:has(> .rcard), .sec:has(> .tcard) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
+
+/* ---- help sheet + crisis guide ---- */
+.helpgrp { display: grid; gap: 6px; }
+.helpline { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); color: var(--ink); text-decoration: none; }
+.helpline > span:first-child { display: grid; gap: 2px; min-width: 0; }
+.helpline .num { font-weight: 800; white-space: nowrap; color: var(--brand, var(--ink)); }
+.helpline:hover { background: var(--surface2); }
+.crisis summary { cursor: pointer; }
+.crisis ol { margin: 12px 0 0; padding-left: 20px; display: grid; gap: 8px; }

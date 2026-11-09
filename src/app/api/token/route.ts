@@ -22,6 +22,9 @@ export async function POST(req: Request) {
   const { data: u, error: uerr } = await sb.auth.getUser(jwt);
   if (uerr || !u.user) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
 
+  const { data: ok } = await sb.rpc("rate_allow_me", { p_action: "token", p_max: 30, p_window_secs: 600 });
+  if (ok === false) return NextResponse.json({ error: "Too many tries. Wait a few minutes." }, { status: 429 });
+
   const { data: acc } = await sb.rpc("room_access", { p_room: roomId });
   if (!acc?.ok) return NextResponse.json({ error: "Join the group first." }, { status: 403 });
 

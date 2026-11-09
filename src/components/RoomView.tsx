@@ -12,6 +12,7 @@ import { MAX_SPEAKERS, type RoomDef } from "@/lib/rooms";
 import { avatarVar, initials } from "@/lib/session";
 import GroupChat from "./GroupChat";
 import { useQuickExit } from "./QuickExit";
+import { HelpSheet } from "./ui";
 
 type Hand = { identity: string; name: string };
 const enc = new TextEncoder();
@@ -39,6 +40,7 @@ export default function RoomView({ room, host, alias, token, onLeave }: Props) {
   const [voiceRaw, setVoice] = useStored<VoiceId>("voice", "natural");
   const voice: VoiceId = isVoiceId(voiceRaw) ? voiceRaw : "natural";
   const proc = useRef<VoiceProcessor | null>(null);
+  const [help, setHelp] = useState(false);
   const toastT = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const say = useCallback((m: string) => {
@@ -155,8 +157,9 @@ export default function RoomView({ room, host, alias, token, onLeave }: Props) {
       <div className="topbar">
         <button className="btn ghost sm" onClick={() => { lk.disconnect(); onLeave(); }}>Leave quietly</button>
         <span className="livepill"><i />Live</span>
-        <button className="btn ghost sm" onClick={() => { lk.disconnect(); onLeave(); quickExit(); }}>Quick exit</button>
+        <span className="row"><button className="pill-help" onClick={() => setHelp(true)}>♥ Help</button><button className="btn ghost sm" onClick={() => { lk.disconnect(); onLeave(); quickExit(); }}>Quick exit</button></span>
       </div>
+      {help && <HelpSheet onClose={() => setHelp(false)} />}
       <div>
         <h1 className="display ptitle" style={{ fontSize: 22 }}>{room.title}</h1>
         <p className="fine">{room.cat}{room.women ? " · Women only" : ""}</p>

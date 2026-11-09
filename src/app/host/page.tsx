@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { CRISIS_STEPS } from "@/lib/help";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { useToast } from "@/components/ui";
@@ -60,6 +61,11 @@ export default function Host() {
       {toast}
       <div className="topbar"><Link className="wordmark display" href="/">Therapia</Link><button className="btn ghost sm" onClick={signOut}>Sign out</button></div>
       <div><h1 className="display ptitle">Host tools</h1><p className="muted">Signed in as {role}.</p></div>
+
+      <details className="card crisis">
+        <summary><b>If someone in your room is in crisis</b></summary>
+        <ol>{CRISIS_STEPS.map((s) => <li key={s}>{s}</li>)}</ol>
+      </details>
 
       {rooms.length === 0 && <div className="card"><p>No groups are assigned to you yet. The Therapia owner links your account to your group.</p></div>}
 
