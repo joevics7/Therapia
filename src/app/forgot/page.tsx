@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { passwordProblem } from "@/lib/identity";
+import { passwordProblem, QUESTIONS } from "@/lib/identity";
 
 type Reply = { ok: boolean; status: number; j: { questions?: string[]; username?: string; error?: string; message?: string } };
 async function call(body: object): Promise<Reply> {
@@ -83,6 +83,8 @@ function ForgotPassword() {
 function ForgotUsername({ goPassword }: { goPassword: () => void }) {
   const [a1, setA1] = useState("");
   const [a2, setA2] = useState("");
+  const [q1, setQ1] = useState("");
+  const [q2, setQ2] = useState("");
   const [month, setMonth] = useState("");
   const [needMonth, setNeedMonth] = useState(false);
   const [found, setFound] = useState("");
@@ -109,9 +111,23 @@ function ForgotUsername({ goPassword }: { goPassword: () => void }) {
   );
   return (
     <form className="card" onSubmit={go}>
-      <p className="muted">Type the answers to your two security questions, in any order.</p>
-      <input className="field" value={a1} onChange={(e) => setA1(e.target.value)} autoComplete="off" aria-label="First answer" placeholder="One of your answers" />
-      <input className="field" value={a2} onChange={(e) => setA2(e.target.value)} autoComplete="off" aria-label="Second answer" placeholder="Your other answer" />
+      <p className="muted">Pick the two questions you chose when you joined, then type your answers. Order does not matter.</p>
+      <label className="stack"><span className="eyebrow">Security question 1</span>
+        <select className="field" value={q1} onChange={(e) => setQ1(e.target.value)}>
+          <option value="">Pick the question you chose…</option>
+          {QUESTIONS.map((q) => <option key={q} value={q}>{q}</option>)}
+          <option value="custom">One I wrote myself</option>
+        </select>
+        <input className="field" value={a1} onChange={(e) => setA1(e.target.value)} autoComplete="off" aria-label="Answer to question 1" placeholder="Your answer" />
+      </label>
+      <label className="stack"><span className="eyebrow">Security question 2</span>
+        <select className="field" value={q2} onChange={(e) => setQ2(e.target.value)}>
+          <option value="">Pick the question you chose…</option>
+          {QUESTIONS.map((q) => <option key={q} value={q}>{q}</option>)}
+          <option value="custom">One I wrote myself</option>
+        </select>
+        <input className="field" value={a2} onChange={(e) => setA2(e.target.value)} autoComplete="off" aria-label="Answer to question 2" placeholder="Your answer" />
+      </label>
       {needMonth && (
         <label className="stack"><span className="eyebrow">Month you created your account</span>
           <select className="field" value={month} onChange={(e) => setMonth(e.target.value)}><option value="">Choose…</option>{months().map((m) => <option key={m.v} value={m.v}>{m.l}</option>)}</select>
