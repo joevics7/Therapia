@@ -6,7 +6,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { createAccount, safeNext, signInWithUsername } from "@/lib/auth-actions";
 import RecoveryFields, { emptyRecovery, toRecovery } from "@/components/RecoveryFields";
-import { passwordProblem, recoveryProblem, usernameProblem } from "@/lib/identity";
+import { generateUsername, passwordProblem, recoveryProblem, usernameProblem } from "@/lib/identity";
 
 function Login() {
   const router = useRouter();
@@ -56,11 +56,13 @@ function Login() {
       </div>
 
       <form className="card" onSubmit={submit}>
+        {mode === "up" && <div className="notice"><b>Stay anonymous.</b> Don&rsquo;t use your real name, phone number or anything that points to you. Pick a made-up name, or let us make one.</div>}
         <label className="stack">
           <span className="eyebrow">Username</span>
-          <input className="field" value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" autoCapitalize="none" spellCheck={false} maxLength={20} />
+          <input className="field" value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" autoCapitalize="none" spellCheck={false} maxLength={20} placeholder={mode === "up" ? "e.g. CalmBaobab482" : undefined} />
         </label>
-        {mode === "up" && <p className="fine">3 to 20 letters, numbers or underscores. This is the name people see in your groups. You can use another name in any group.</p>}
+        {mode === "up" && <button type="button" className="btn soft sm" onClick={() => setUsername(generateUsername())}>🎲 Generate a name for me</button>}
+        {mode === "up" && <p className="fine">3 to 20 letters, numbers or underscores. This is the name people see in your groups. You can use another name in any group. Write it down, you will need it to sign in.</p>}
         <label className="stack">
           <span className="eyebrow">Password</span>
           <input className="field" type={show ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete={mode === "in" ? "current-password" : "new-password"} />

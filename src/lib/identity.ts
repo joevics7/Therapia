@@ -60,3 +60,13 @@ export function recoveryProblem(q1: string, a1: string, q2: string, a2: string):
     || (normText(q1) === normText(q2) ? "Pick two different questions." : null)
     || answerProblem(a1) || answerProblem(a2);
 }
+
+const ADJ = ["Calm", "Brave", "Gentle", "Sunny", "Quiet", "Kind", "Bright", "Steady", "Warm", "Cool", "Happy", "Wise", "Bold", "Mellow", "Swift"];
+const NOUN = ["Baobab", "Palm", "Zobo", "Suya", "Kente", "Drum", "River", "Sunrise", "Parrot", "Lion", "Mango", "Cocoa", "Gele", "Moon", "Egret"];
+
+/** A random, anonymous username like "CalmBaobab482" (always valid, max 16 chars). */
+export function generateUsername(): string {
+  const r = new Uint32Array(3);
+  crypto.getRandomValues(r);
+  return `${ADJ[r[0] % ADJ.length]}${NOUN[r[1] % NOUN.length]}${100 + (r[2] % 900)}`;
+}
