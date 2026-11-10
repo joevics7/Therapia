@@ -2,84 +2,112 @@
 
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
-import { avatarVar, initials } from "@/lib/session";
+import { PhotoSlot, Person } from "@/components/People";
 
-const TOPICS: [string, string][] = [["Marriage & abuse", "b"], ["Betting", "a"], ["Addiction", "e"], ["Grief", "d"], ["Stress & money", "c"]];
+const ROOMS: { t: string; d: string; p: string }[] = [
+  { t: "Marriage & abuse", d: "Say what is happening at home to people who understand.", p: "b" },
+  { t: "Betting", d: "Lost money, lost sleep. Talk about it without shame.", p: "a" },
+  { t: "Addiction", d: "Recovery is easier when you are not alone in it.", p: "e" },
+  { t: "Grief", d: "Missing someone? Sit with others who miss someone too.", p: "d" },
+  { t: "Stress & money", d: "Pressure from work, family and bills. Breathe here.", p: "c" },
+];
 
 export default function Landing() {
-  const { ready, session, username } = useAuth();
+  const { ready, session } = useAuth();
   const signedIn = ready && !!session;
-  const name = username ?? "friend";
 
-  const enter = signedIn
-    ? <Link className="btn primary big" href="/dashboard">Enter as {name}</Link>
-    : <Link className="btn primary big" href="/login?mode=up">Create your name</Link>;
+  const join = signedIn
+    ? <Link className="btn accent big" href="/dashboard">Go to your dashboard</Link>
+    : <Link className="btn accent big" href="/login?mode=up">Join Therapia</Link>;
 
   return (
-    <div className="pg-wide land">
-      <div className="topbar"><span className="wordmark display">Therapia</span></div>
-      <div className="land-top">
-      <h1 className="tag display">Say it out loud. Nobody has to know it&rsquo;s you.</h1>
-      <div className="hero ankara pal-a" aria-hidden="true" />
-      <div className="land-card">
-      {signedIn ? (
-        <div className="namecard">
-          <span className="av" style={{ "--s": "72px", background: avatarVar(name) } as React.CSSProperties}>{initials(name)}</span>
-          <div className="nc-text"><div className="eyebrow">Welcome back</div><div className="handle display">{name}</div></div>
-        </div>
-      ) : (
-        <div className="namecard">
-          <span className="av" style={{ "--s": "72px", background: "var(--av1)" } as React.CSSProperties}>?</span>
-          <div className="nc-text"><div className="eyebrow">Your name here</div><div className="handle display">Pick any username</div></div>
-        </div>
-      )}
-      {enter}
-      {!signedIn && <Link className="btn ghost big" href="/login">I already have a name</Link>}
-      <ul className="assure">
-        <li><span className="ic">✓</span>No email. No phone number.</li>
-        <li><span className="ic">✓</span>Audio is never recorded.</li>
-        <li><span className="ic">✓</span>Use a different name in any group.</li>
-      </ul>
-      </div>
-      </div>
+    <div className="lp">
+      <header className="lp-nav">
+        <span className="wordmark display">Therapia</span>
+        <nav aria-label="Account">
+          {signedIn
+            ? <Link className="btn primary sm" href="/dashboard">Dashboard</Link>
+            : <><Link className="btn ghost sm" href="/login">Sign in</Link><Link className="btn primary sm" href="/login?mode=up">Join</Link></>}
+        </nav>
+      </header>
 
-      <section className="sec">
-        <h2 className="sec-h display">How it works</h2>
-        <ol className="steps">
-          <li><span className="sn">1</span><div><b>Pick a name</b><span className="muted">A username and a password. No email, no phone.</span></div></li>
-          <li><span className="sn">2</span><div><b>Join a room</b><span className="muted">Free voice rooms every week, by topic.</span></div></li>
-          <li><span className="sn">3</span><div><b>Listen or speak</b><span className="muted">Stay quiet as long as you like. Raise your hand when you are ready.</span></div></li>
+      <section className="lp-hero">
+        <div className="lp-copy">
+          <span className="lp-pill">Free · Anonymous · Made for Africa</span>
+          <h1 className="display">Say it out loud.<br />Nobody has to know it&rsquo;s&nbsp;you.</h1>
+          <p>Therapia is a safe place to talk. Join free voice rooms led by trained facilitators, chat with people who get it, or book a therapist. You choose a username, never your real name.</p>
+          <div className="lp-cta">{join}{!signedIn && <Link className="btn ghost big" href="/login">I already have an account</Link>}</div>
+          <ul className="lp-ticks">
+            <li>No email. No phone number.</li>
+            <li>Audio is never recorded.</li>
+            <li>Change your voice if you want to.</li>
+          </ul>
+        </div>
+        <div className="lp-collage" aria-hidden="true">
+          <PhotoSlot name="hero-1" who="ada" className="c1" />
+          <PhotoSlot name="hero-2" who="tunde" className="c2" />
+          <PhotoSlot name="hero-3" who="ngozi" className="c3" />
+          <span className="lp-chip k1">🎙 Live now · Grief circle</span>
+          <span className="lp-chip k2">🔒 Anonymous</span>
+        </div>
+      </section>
+
+      <section className="lp-sec">
+        <h2 className="display">What is Therapia?</h2>
+        <p className="lp-lead">Many of us carry things we cannot say at home, at church or at work. Therapia gives you a private place to say them, and people who will listen without judging.</p>
+        <div className="lp-trio">
+          <div className="lp-card"><PhotoSlot name="about-1" who="zainab" className="sm" /><h3>Talk in voice rooms</h3><p>Join a group by topic. Listen quietly for as long as you like. Raise your hand when you are ready to speak.</p></div>
+          <div className="lp-card"><PhotoSlot name="about-2" who="kola" className="sm" /><h3>Chat, then it disappears</h3><p>Every group has a text chat. Messages delete themselves after 7 days.</p></div>
+          <div className="lp-card"><PhotoSlot name="about-3" who="amaka" className="sm" /><h3>Talk to a therapist</h3><p>Book one-on-one voice sessions with licensed therapists when you want more support.</p></div>
+        </div>
+      </section>
+
+      <section className="lp-sec">
+        <h2 className="display">Rooms for what you are carrying</h2>
+        <div className="lp-rooms">
+          {ROOMS.map((r) => (
+            <div className="lp-room" key={r.t}><span className={`dot ankara pal-${r.p}`} aria-hidden="true" /><div><b>{r.t}</b><span>{r.d}</span></div></div>
+          ))}
+          <div className="lp-room women"><span className="dot ankara pal-e" aria-hidden="true" /><div><b>Women-only rooms</b><span>Invite codes and a host lobby, so everyone who comes in is a woman.</span></div></div>
+        </div>
+      </section>
+
+      <section className="lp-sec lp-how">
+        <h2 className="display">How it works</h2>
+        <ol className="lp-steps">
+          <li><span>1</span><div><b>Join</b><p>Pick a username and password. Add two security questions so you can get back in.</p></div></li>
+          <li><span>2</span><div><b>Find your room</b><p>Open your dashboard and choose a group that fits what you are going through.</p></div></li>
+          <li><span>3</span><div><b>Listen or speak</b><p>Use your username, or a different name in each group. Change your voice if it helps.</p></div></li>
         </ol>
       </section>
 
-      <section className="sec">
-        <h2 className="sec-h display">Rooms for what you are carrying</h2>
-        <div className="topics">
-          {TOPICS.map(([t, p]) => <span className="topic" key={t}><span className={`dot ankara pal-${p}`} aria-hidden="true" />{t}</span>)}
+      <section className="lp-sec lp-safe">
+        <div className="lp-safe-in">
+          <div>
+            <h2 className="display">Built to keep you safe</h2>
+            <ul className="lp-ticks big">
+              <li>Facilitators lead every room.</li>
+              <li>Report anyone. Hosts can remove people fast.</li>
+              <li>Quick exit hides the app in one tap.</li>
+              <li>Real helplines are one tap away on every screen.</li>
+            </ul>
+          </div>
+          <div className="lp-faces" aria-hidden="true">
+            <Person who="amaka" className="f" /><Person who="kola" className="f" /><Person who="zainab" className="f" /><Person who="ada" className="f" />
+          </div>
         </div>
       </section>
 
-      <section className="sec">
-        <h2 className="sec-h display">More than rooms</h2>
-        <ul className="more" style={{ padding: 0 }}>
-          <li><span className="ic">◎</span><div><b>Groups</b><span className="muted">Voice rooms led by trained facilitators.</span></div></li>
-          <li><span className="ic">✉</span><div><b>Therapy</b><span className="muted">One-on-one voice sessions with licensed therapists.</span></div></li>
-          <li><span className="ic">❏</span><div><b>Library</b><span className="muted">Books, short reads and calm audio. Many are free.</span></div></li>
-          <li><span className="ic">✦</span><div><b>Tools</b><span className="muted">Breathing, grounding, a private journal and a quick exit.</span></div></li>
-        </ul>
+      <section className="lp-final">
+        <h2 className="display">You do not have to carry it alone.</h2>
+        <p>It takes a minute to join. No email needed.</p>
+        <div className="lp-cta one">{join}</div>
       </section>
 
-      <section className="band">
-        <h2 className="sec-h display">Built for safety</h2>
-        <ul className="assure">
-          <li><span className="ic">✓</span>Verified facilitators lead every room.</li>
-          <li><span className="ic">✓</span>Women-only rooms use invite codes and a host lobby.</li>
-          <li><span className="ic">✓</span>Anyone can report, and hosts can remove people fast.</li>
-          <li><span className="ic">✓</span>Help is one tap away, in every screen.</li>
-        </ul>
-        {enter}
-      </section>
-      <p className="fine"><Link href="/host/login">Facilitator sign-in</Link> · <Link href="/forgot">Forgot password?</Link></p>
+      <footer className="lp-foot">
+        <span className="muted">Therapia is peer support and therapy booking. If you are in danger now, call 112.</span>
+        <span><Link href="/host/login">Facilitator sign-in</Link> · <Link href="/forgot">Forgot password?</Link></span>
+      </footer>
     </div>
   );
 }

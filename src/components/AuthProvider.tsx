@@ -27,8 +27,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!supabaseConfigured) { setError("not_configured"); setReady(true); return; }
     const sb = supabase();
-    sb.auth.getSession().then(({ data }) => { setSession(data.session); setReady(true); });
-    const { data } = sb.auth.onAuthStateChange((_e, s) => setSession(s));
+    // Accounts need a username. A leftover guest (anonymous) session from the old sign-in counts as signed out, and is cleared.
+    const accept = (s: Session | null) => {
+      if (s?.user.is_anonymous) { sb.auth.signOut().catch(() => {}); return null; }
+      return s;
+    };
+    sb.auth.getSession().then(({ data }) => { setSession(accept(data.session)); setReady(true); });
+    const { data } = sb.auth.onAuthStateChange((_e, s) => setSession(accept(s)));
     return () => data.subscription.unsubscribe();
   }, []);
 
