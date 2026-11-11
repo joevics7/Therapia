@@ -36,3 +36,17 @@ Set them for Production and Preview, then redeploy (public values are baked in a
 - Create real facilitator accounts (see README) and set invite codes for women-only groups.
 - Decide who the "Therapia owner" is for crisis follow-ups (the host guide tells hosts to report to them).
 - Microphone access needs HTTPS. Vercel provides it; for local testing use `localhost`.
+
+## Admin page (`/admin`)
+
+Only accounts marked as admin in the database can use it. Every admin action is re-checked on the server, so hiding the page is not what protects it.
+
+1. Create your own account on the site as normal (Join, then pick a username and password).
+2. In Supabase, open **SQL Editor** and run (use your real username):
+
+   ```sql
+   update public.profiles set role = 'admin' where lower(username) = lower('YOUR_USERNAME');
+   ```
+3. Open `/admin` while signed in. You can add, edit and delete facilitators, assign them to groups, create and edit groups, set group passwords, add dated sessions, ban members and resolve reports.
+
+Facilitators sign in at `/host/login` with the username and password you gave them. `SUPABASE_SERVICE_ROLE_KEY` must be set on Vercel for the admin page to work.

@@ -13,6 +13,7 @@ type Report = { id: string; room_id: string; reason: string; body_snapshot: stri
 
 export default function Host() {
   const { ready, role, signOut } = useAuth();
+  const isAdmin = role === "admin";
   const { say, toast } = useToast();
   const [rooms, setRooms] = useState<RoomDef[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -59,7 +60,7 @@ export default function Host() {
   return (
     <div className="pg-narrow">
       {toast}
-      <div className="topbar"><Link className="wordmark display" href="/">Therapia</Link><button className="btn ghost sm" onClick={signOut}>Sign out</button></div>
+      <div className="topbar"><Link className="wordmark display" href="/">Therapia</Link>{isAdmin && <Link className="btn soft sm" href="/admin">Admin</Link>}<button className="btn ghost sm" onClick={signOut}>Sign out</button></div>
       <div><h1 className="display ptitle">Host tools</h1><p className="muted">Signed in as {role}.</p></div>
 
       <details className="card crisis">
