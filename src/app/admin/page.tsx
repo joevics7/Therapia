@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import RequireAuth from "@/components/RequireAuth";
 import { useAuth } from "@/components/AuthProvider";
 import { useToast } from "@/components/ui";
 import { authPost } from "@/lib/api";
 import { fmtLagos } from "@/lib/rooms";
+import { supabase } from "@/lib/supabase";
 
 type Room = { id: string; title: string; cat: string; host_name: string; host_id: string | null; women_only: boolean; men_only: boolean; pal: string; schedule_text: string | null; active: boolean };
 type Fac = { user_id: string; username: string; display_name: string | null };
@@ -20,11 +21,45 @@ type Call = (action: string, body?: object) => Promise<{ ok: boolean; data: Reco
 const BLANK: Room = { id: "", title: "", cat: "", host_name: "", host_id: null, women_only: false, men_only: false, pal: "a", schedule_text: "", active: true };
 const PALS = ["a", "b", "c", "d", "e"];
 
+/** Email + password sign-in for admins. There is no sign-up here. Accounts are made by the site owner in Supabase. */
+function AdminSignIn() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  async function submit(e: React.FormEvent) {
+    e.preventDefault(); setBusy(true); setErr("");
+    const { error } = await supabase().auth.signInWithPassword({ email: email.trim(), password });
+    setBusy(false);
+    if (error) setErr("That email or password didn't work.");
+    // On success the page re-checks the account. Non-admin accounts are sent to the homepage.
+  }
+  return (
+    <div className="pg-narrow">
+      <div className="topbar"><span className="wordmark display">Therapia <small className="muted">admin</small></span></div>
+      <h1 className="display ptitle">Admin sign-in</h1>
+      <form className="card" onSubmit={submit}>
+        <label htmlFor="ae" className="eyebrow">Email</label>
+        <input id="ae" className="field" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        <label htmlFor="ap" className="eyebrow">Password</label>
+        <input id="ap" className="field" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+        {err && <p className="err" role="alert">{err}</p>}
+        <button className="btn primary big" type="submit" disabled={busy}>{busy ? "Signing in…" : "Sign in"}</button>
+      </form>
+    </div>
+  );
+}
+
+/** Checks who you are before showing anything. Not signed in: the sign-in form. Signed in but not an admin: sent home. */
 export default function AdminPage() {
-  return <RequireAuth><Admin /></RequireAuth>;
+  const { ready, session } = useAuth();
+  if (!ready) return <div className="pg-narrow"><p className="muted">Checking access…</p></div>;
+  if (!session) return <AdminSignIn />;
+  return <Admin />;
 }
 
 function Admin() {
+  const router = useRouter();
   const { signOut } = useAuth();
   const { say, toast } = useToast();
   const [data, setData] = useState<Overview | null>(null);
@@ -43,14 +78,10 @@ function Admin() {
     if (r.ok) setData(r.data as unknown as Overview);
   }, [call]);
   useEffect(() => { load(); }, [load]);
+  // Not an admin: leave straight away, without showing anything.
+  useEffect(() => { if (denied) router.replace("/"); }, [denied, router]);
 
-  if (denied) return (
-    <div className="pg-narrow">
-      <div className="topbar"><Link className="wordmark display" href="/">Therapia</Link></div>
-      <div className="card"><p className="display ptitle" style={{ fontSize: 22 }}>Admins only</p><p className="muted">This area is for Therapia administrators.</p><Link className="btn primary" href="/dashboard">Back to the app</Link></div>
-    </div>
-  );
-  if (!data) return <div className="pg-narrow"><p className="muted">Loading…</p></div>;
+  if (denied || !data) return <div className="pg-narrow"><p className="muted">Checking access…</p></div>;
 
   return (
     <div className="pg-wide adm">

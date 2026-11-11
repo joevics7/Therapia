@@ -39,14 +39,15 @@ Set them for Production and Preview, then redeploy (public values are baked in a
 
 ## Admin page (`/admin`)
 
-Only accounts marked as admin in the database can use it. Every admin action is re-checked on the server, so hiding the page is not what protects it.
+`/admin` has its own sign-in with an email and password. There is no sign-up. If you are signed in without admin rights, you are sent to the homepage. The server re-checks admin rights on every action, so hiding the page is not what protects it.
 
-1. Create your own account on the site as normal (Join, then pick a username and password).
-2. In Supabase, open **SQL Editor** and run (use your real username):
+1. In Supabase open **Authentication > Users > Add user**. Enter your email and a strong password, and tick **Auto Confirm User**.
+2. In **SQL Editor** run (use that email):
 
    ```sql
-   update public.profiles set role = 'admin' where lower(username) = lower('YOUR_USERNAME');
+   update public.profiles set role = 'admin'
+   where user_id = (select id from auth.users where lower(email) = lower('YOU@EXAMPLE.COM'));
    ```
-3. Open `/admin` while signed in. You can add, edit and delete facilitators, assign them to groups, create and edit groups, set group passwords, add dated sessions, ban members and resolve reports.
+3. Go to `/admin` and sign in. You can add, edit and delete facilitators, assign them to groups, create and edit groups, set group passwords, add dated sessions, ban members and resolve reports.
 
 Facilitators sign in at `/host/login` with the username and password you gave them. `SUPABASE_SERVICE_ROLE_KEY` must be set on Vercel for the admin page to work.
