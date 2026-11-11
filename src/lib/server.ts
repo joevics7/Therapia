@@ -37,3 +37,17 @@ export function lookupKey(a1: string, a2: string): string {
   const joined = [norm(a1), norm(a2)].sort().join("\u0000");
   return createHmac("sha256", pepper).update(joined).digest("hex");
 }
+
+import type { RoomServiceClient } from "livekit-server-sdk";
+
+/** True when the facilitator is connected to this audio room right now. */
+export async function hostIsIn(svc: RoomServiceClient, roomId: string): Promise<boolean> {
+  try {
+    const ps = await svc.listParticipants(roomId);
+    return ps.some((p) => {
+      try { return JSON.parse(p.metadata || "{}").role === "host"; } catch { return false; }
+    });
+  } catch {
+    return false; // the room does not exist yet, so nobody is in it
+  }
+}

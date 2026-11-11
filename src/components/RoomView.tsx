@@ -156,7 +156,7 @@ export default function RoomView({ room, host, alias, token, onLeave }: Props) {
       {toast && <div className="toast" role="status" aria-live="polite">{toast}</div>}
       <div className="topbar">
         <button className="btn ghost sm" onClick={() => { lk.disconnect(); onLeave(); }}>Leave quietly</button>
-        <span className="livepill"><i />Live</span>
+        {hostP ? <span className="livepill"><i />Live</span> : <span className="fine">Waiting for host</span>}
         <span className="row"><button className="pill-help" onClick={() => setHelp(true)}>♥ Help</button><button className="btn ghost sm" onClick={() => { lk.disconnect(); onLeave(); quickExit(); }}>Quick exit</button></span>
       </div>
       {help && <HelpSheet onClose={() => setHelp(false)} />}

@@ -37,7 +37,7 @@ export default function Dashboard() {
 
   const today = dayKey();
   const mood = log[today];
-  const liveRooms = (rooms ?? []).filter((r) => live[r.id]);
+  const liveRooms = (rooms ?? []).filter((r) => r.id in live);
 
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(Date.now() - (6 - i) * 86400000);

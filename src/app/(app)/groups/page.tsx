@@ -34,8 +34,8 @@ export default function Groups() {
   };
 
   const list = rooms ?? [];
-  const liveRooms = list.filter((r) => live[r.id]);
-  const rest = list.filter((r) => !live[r.id]);
+  const liveRooms = list.filter((r) => r.id in live);
+  const rest = list.filter((r) => !(r.id in live));
 
   const card = (r: RoomDef) => (
     <article key={r.id} className={`rcard pal-${r.pal}`}>
@@ -45,15 +45,15 @@ export default function Groups() {
         <h3 className="display">{r.title}</h3>
         <div className="rc-host">{r.host}</div>
         <div className="rc-meta">
-          {live[r.id] ? (<><span className="livepill"><i />Live</span><span>{live[r.id]} listening</span></>) : (<span style={{ fontWeight: 700 }}>{r.next ? `Next: ${r.next}` : `${r.when} WAT`}</span>)}
+          {r.id in live ? (<><span className="livepill"><i />Live</span><span>{live[r.id]} listening</span></>) : (<span style={{ fontWeight: 700 }}>{r.next ? `Next: ${r.next}` : `${r.when} WAT`}</span>)}
           {r.women && <span className="badge hib">Women only</span>}
           {r.men && <span className="badge">For men</span>}
         </div>
       </div>
       <div className="rc-act row">
-        <Link className={`btn sm ${live[r.id] ? "accent" : "ghost"}`} href={`/room/${r.id}`}>{live[r.id] ? "Join" : "Open room"}</Link>
+        <Link className={`btn sm ${r.id in live ? "accent" : "ghost"}`} href={`/room/${r.id}`}>{r.id in live ? "Join" : "Open room"}</Link>
         <Link className="btn sm ghost" href={`/chat/${r.id}`}>Chat</Link>
-        {!live[r.id] && <button className="btn sm soft" aria-pressed={!!on[r.id]} onClick={() => remind(r)}>{on[r.id] ? "Reminder on ✓" : "Remind me"}</button>}
+        {!(r.id in live) && <button className="btn sm soft" aria-pressed={!!on[r.id]} onClick={() => remind(r)}>{on[r.id] ? "Reminder on ✓" : "Remind me"}</button>}
       </div>
     </article>
   );

@@ -5,11 +5,15 @@ import { useAuth } from "@/components/AuthProvider";
 import { PhotoSlot, Person } from "@/components/People";
 
 const ROOMS: { t: string; d: string; p: string }[] = [
-  { t: "Marriage & abuse", d: "Say what is happening at home to people who understand.", p: "b" },
+  { t: "Abusive marriages", d: "Say what is happening at home to people who understand.", p: "b" },
   { t: "Betting", d: "Lost money, lost sleep. Talk about it without shame.", p: "a" },
-  { t: "Addiction", d: "Recovery is easier when you are not alone in it.", p: "e" },
+  { t: "Alcohol and drugs", d: "Recovery is easier when you are not alone in it.", p: "e" },
   { t: "Grief", d: "Missing someone? Sit with others who miss someone too.", p: "d" },
-  { t: "Stress & money", d: "Pressure from work, family and bills. Breathe here.", p: "c" },
+  { t: "Money stress", d: "Pressure from work, family and bills. Breathe here.", p: "c" },
+  { t: "Anxiety and panic", d: "Racing thoughts and tight chests, shared and eased.", p: "b" },
+  { t: "Depression", d: "Heavy days are easier with people who understand.", p: "d" },
+  { t: "Heartbreak", d: "Breakups, betrayal and love that did not work out.", p: "c" },
+  { t: "Job loss and career", d: "Unemployment, burnout and fear about the future.", p: "e" },
 ];
 
 export default function Landing() {
@@ -35,7 +39,7 @@ export default function Landing() {
         <div className="lp-copy">
           <span className="lp-pill">Free · Anonymous · Made for Africa</span>
           <h1 className="display">Say it out loud.<br />Nobody has to know it&rsquo;s&nbsp;you.</h1>
-          <p>Therapia is a safe place to talk. Join free voice rooms led by trained facilitators, chat with people who get it, or book a therapist. You choose a username, never your real name.</p>
+          <p>Therapia is a safe place to talk. Join free voice groups led by trained facilitators, at set times, chat with people who get it, or book a therapist. You choose a username, never your real name.</p>
           <div className="lp-cta">{join}{!signedIn && <Link className="btn ghost big" href="/login">I already have an account</Link>}</div>
           <ul className="lp-ticks">
             <li>No email. No phone number.</li>

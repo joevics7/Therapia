@@ -1,6 +1,6 @@
-import { AccessToken } from "livekit-server-sdk";
+import { AccessToken, RoomServiceClient } from "livekit-server-sdk";
 import { NextResponse } from "next/server";
-import { bearer, livekitEnv, ROOM_ID } from "@/lib/server";
+import { bearer, hostIsIn, livekitEnv, ROOM_ID } from "@/lib/server";
 import { userClient } from "@/lib/supabase";
 
 export const runtime = "nodejs";
@@ -29,6 +29,10 @@ export async function POST(req: Request) {
   if (!acc?.ok) return NextResponse.json({ error: "Join the group first." }, { status: 403 });
 
   const host = !!acc.is_host;
+  // Audio only opens once the facilitator is in the room. Chat stays open at all times.
+  if (!host && !(await hostIsIn(new RoomServiceClient(env.httpUrl, env.key, env.secret), roomId))) {
+    return NextResponse.json({ error: "The facilitator hasn't arrived yet.", code: "not_started" }, { status: 409 });
+  }
   const at = new AccessToken(env.key, env.secret, {
     identity: String(acc.alias),
     name: String(acc.handle),
