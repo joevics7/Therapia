@@ -105,7 +105,7 @@ export default function GroupChat({ roomId, alias, isHost, compact }: { roomId: 
             <div className={`msg${own ? " me" : ""}${ai ? " ai" : ""}`} key={m.id}>
               <Avatar name={m.handle} kind={ai ? "ai" : m.anonymous ? "anon" : undefined} />
               <div className="bub">
-                <div className="who">{ai ? <>{MASCOT_NAME} <span className="aitag">AI helper</span></> : own ? (m.anonymous ? "You (shown as Anonymous)" : "You") : m.handle}</div>
+                <div className="who">{ai ? <>{MASCOT_NAME} <span className="aitag">AI helper</span></> : own ? (m.anonymous ? "You (username hidden)" : "You") : m.handle}</div>
                 <p>{m.body}</p>
                 <div className="msg-acts">
                   {!own && <button onClick={() => report(m)}>{ai ? "Report this reply" : "Report"}</button>}
@@ -123,10 +123,10 @@ export default function GroupChat({ roomId, alias, isHost, compact }: { roomId: 
         <button className="btn primary" type="submit" aria-label="Send">Send</button>
       </form>
       <div className="chat-opts">
-        <label className="check"><input type="checkbox" checked={anon} onChange={(e) => setAnon(e.target.checked)} />Send as Anonymous</label>
+        <label className="check"><input type="checkbox" checked={anon} onChange={(e) => setAnon(e.target.checked)} />Hide my username</label>
         <button type="button" className="btn ghost sm" onClick={() => setText((t) => (TAG_RE.test(t) ? t : `@${MASCOT_NAME} ${t}`))}>✦ Ask {MASCOT_NAME}</button>
       </div>
-      <p className="fine">Messages disappear after 7 days. Audio is never recorded. Anonymous messages hide your name from the group, but hosts can still act on abuse.</p>
+      <p className="fine">Messages disappear after 7 days. Audio is never recorded. Hidden messages do not show your username, but hosts can still act on abuse.</p>
       <p className="fine">{MASCOT_NAME} is an AI helper, not a therapist. Messages sent to {MASCOT_NAME} are processed by AI services (Gemini, DeepSeek), so never share personal details. In an emergency call 112.</p>
     </div>
   );

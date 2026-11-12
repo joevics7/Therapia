@@ -12,7 +12,7 @@ const MESSAGES: Record<string, string> = {
   blocked: "You can't join this group.",
   not_found: "This group isn't available.",
   not_signed_in: "Please sign in first.",
-  name_taken: "Someone already uses that name. Pick another, or leave it blank to use your username.",
+  name_taken: "That name is not available in this group.",
   name_not_allowed: "That name can't be used. Pick another.",
 };
 
@@ -38,12 +38,12 @@ export function useMembership(roomId: string) {
     });
   }, [ready, uid, roomId]);
 
-  /** customName is optional. Blank means "use my username". */
-  const join = useCallback(async (code?: string, customName?: string): Promise<Member | null> => {
+  /** You always appear by your username. */
+  const join = useCallback(async (code?: string): Promise<Member | null> => {
     setBusy(true);
     setError("");
     try {
-      const handle = (customName ?? "").trim() || username || (role !== "listener" ? "Host" : "Guest");
+      const handle = username || (role !== "listener" ? "Host" : "Guest");
       const { data, error: e } = await supabase().rpc("join_room", { p_room: roomId, p_handle: handle, p_code: code?.trim() || null });
       if (e) { setError("Couldn't join. Check your connection and try again."); return null; }
       if (!data?.ok) {

@@ -32,7 +32,7 @@ update public.rooms set host_id = '<their user id>' where id = 'safe';
 Use `role = 'admin'` for yourself to manage every group.
 
 ## Privacy design
-- In a group a person appears by their **username** (default) or a **custom name** for that group. Behind the scenes each membership still has a random alias that chat and audio use, so hosts never see account ids. Custom names can't copy another user's username or pose as staff.
+- In a group a person appears by their **username**, and can tick **Hide my username** on any chat message. Behind the scenes each membership has a random alias that chat and audio use, so hosts never see account ids.
 - Security answers are stored only as bcrypt hashes, 5 tries per hour per username, and are reachable only from the server. To find a forgotten username, the server makes a keyed hash of the two answers (key: `RECOVERY_PEPPER`, or the service-role key if unset) and the database only ever sees that hash. If two accounts share the same answers, the person is also asked for the month they joined.
 - No device ID is stored.
 - Listeners are never asked for personal details. Hosts can't see user ids; reports hide who reported.

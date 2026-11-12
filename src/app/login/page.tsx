@@ -62,7 +62,7 @@ function Login() {
           <input className="field" value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" autoCapitalize="none" spellCheck={false} maxLength={20} placeholder={mode === "up" ? "e.g. CalmBaobab482" : undefined} />
         </label>
         {mode === "up" && <button type="button" className="btn soft sm" onClick={() => setUsername(generateUsername())}>🎲 Generate a name for me</button>}
-        {mode === "up" && <p className="fine">3 to 20 letters, numbers or underscores. This is the name people see in your groups. You can use another name in any group. Write it down, you will need it to sign in.</p>}
+        {mode === "up" && <p className="fine">3 to 20 letters, numbers or underscores. This is the name people see in your groups. Write it down, you will need it to sign in.</p>}
         <label className="stack">
           <span className="eyebrow">Password</span>
           <input className="field" type={show ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete={mode === "in" ? "current-password" : "new-password"} />

@@ -11,8 +11,6 @@ import GroupChat from "./GroupChat";
 export default function ChatClient({ room }: { room: RoomDef }) {
   const { ready, checked, username, member, needCode, busy, error, join } = useMembership(room.id);
   const [code, setCode] = useState("");
-  const [custom, setCustom] = useState("");
-  const [useCustom, setUseCustom] = useState(false);
   const [help, setHelp] = useState(false);
 
   return (
@@ -30,10 +28,8 @@ export default function ChatClient({ room }: { room: RoomDef }) {
       {!ready || !checked ? <p className="muted">Loading…</p> : member ? (
         <GroupChat roomId={room.id} alias={member.alias} isHost={member.isHost} />
       ) : (
-        <form className="card" onSubmit={(e) => { e.preventDefault(); join(code, useCustom ? custom : ""); }}>
-          <p>Join this group to read and write in its chat. You will appear as <b>{useCustom && custom.trim() ? custom.trim() : username || "…"}</b>.</p>
-          <label className="check"><input type="checkbox" checked={useCustom} onChange={(e) => setUseCustom(e.target.checked)} />Use a different name in this group</label>
-          {useCustom && <input className="field" value={custom} onChange={(e) => setCustom(e.target.value)} maxLength={32} placeholder="A name just for this group" aria-label="Name for this group" autoComplete="off" />}
+        <form className="card" onSubmit={(e) => { e.preventDefault(); join(code); }}>
+          <p>Join this group to read and write in its chat. You will appear as <b>{username || "…"}</b>.</p>
           {needCode && (
             <label>
               <span className="eyebrow">Invite code</span>

@@ -15,8 +15,6 @@ export default function RoomClient({ room }: { room: RoomDef }) {
   const router = useRouter();
   const { ready, username, member, needCode, busy, error, join } = useMembership(room.id);
   const [code, setCode] = useState("");
-  const [custom, setCustom] = useState("");
-  const [useCustom, setUseCustom] = useState(false);
   const [joined, setJoined] = useState<Joined | null>(null);
   const [joining, setJoining] = useState(false);
   const [connErr, setConnErr] = useState("");
@@ -45,7 +43,7 @@ export default function RoomClient({ room }: { room: RoomDef }) {
     setConnErr("");
     setJoining(true);
     try {
-      const me = member ?? (await join(code, useCustom ? custom : ""));
+      const me = member ?? (await join(code));
       if (!me) return;
       await connect(me);
     } finally {
@@ -111,9 +109,7 @@ export default function RoomClient({ room }: { room: RoomDef }) {
           <p>You are in this group as <b>{member.handle}</b>. You will start as a listener. Raise your hand when you want to speak.</p>
         ) : (
           <>
-            <p>You will join as <b>{useCustom && custom.trim() ? custom.trim() : username || "…"}</b>. You start as a listener. Raise your hand when you want to speak.</p>
-            <label className="check"><input type="checkbox" checked={useCustom} onChange={(e) => setUseCustom(e.target.checked)} />Use a different name in this group</label>
-            {useCustom && <input className="field" value={custom} onChange={(e) => setCustom(e.target.value)} maxLength={32} placeholder="A name just for this group" aria-label="Name for this group" autoComplete="off" />}
+            <p>You will join as <b>{username || "…"}</b>. You start as a listener. Raise your hand when you want to speak.</p>
           </>
         )}
         {needCode && (

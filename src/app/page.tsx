@@ -81,7 +81,7 @@ export default function Landing() {
         <ol className="lp-steps">
           <li><span>1</span><div><b>Join</b><p>Pick a username and password. Add two security questions so you can get back in.</p></div></li>
           <li><span>2</span><div><b>Find your room</b><p>Open your dashboard and choose a group that fits what you are going through.</p></div></li>
-          <li><span>3</span><div><b>Listen or speak</b><p>Use your username, or a different name in each group. Change your voice if it helps.</p></div></li>
+          <li><span>3</span><div><b>Listen or speak</b><p>Appear by your username, or hide it on any message. Change your voice if it helps.</p></div></li>
         </ol>
       </section>
 

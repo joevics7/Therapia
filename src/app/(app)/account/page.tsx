@@ -67,7 +67,7 @@ export default function Account() {
       {username && (
         <div className="card">
           <h2 className="sec-h display">Your name</h2>
-          <p>In groups you appear as <b>{username}</b> by default. When you join a group you can pick a different name just for it, so people can&rsquo;t connect your groups.</p>
+          <p>In groups you appear as <b>{username}</b>. On any message you can tick <b>Hide my username</b> to send it without your name.</p>
         </div>
       )}
 

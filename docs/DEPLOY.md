@@ -27,7 +27,7 @@ Set them for Production and Preview, then redeploy (public values are baked in a
 ## 4. After the first deploy: a 10-minute check
 1. Create an account, sign out, sign in again.
 2. Forgot password: answer both questions, set a new password. Then try Forgot username with the two answers.
-3. Join a group with a custom name, then send a chat message.
+3. Join a group, then send a chat message, once normally and once with Hide my username ticked.
 4. Open the live room on two phones, one as a host account. Speak with a voice effect on and check the other phone hears the changed voice.
 5. Open Need help now and tap one number on a phone to confirm it dials.
 
@@ -52,9 +52,9 @@ Set them for Production and Preview, then redeploy (public values are baked in a
 
 Facilitators sign in at `/host/login` with the username and password you gave them. `SUPABASE_SERVICE_ROLE_KEY` must be set on Vercel for the admin page to work.
 
-## AI mascot (Ayo)
+## AI mascot (Ava)
 
-Each group chat has an AI helper called Ayo. It answers when someone tags it (`@Ayo` or the Ask Ayo button), when a question has had no reply for 5 minutes, or when someone asks a question and nobody else has written in the group for 10 minutes and nobody is in its audio room. It stays out of messages that need a person, and when a message sounds like a crisis it only points to the Help button and 112.
+Each group chat has an AI helper called Ava. It answers when someone tags it (`@Ava` or the Ask Ava button), when a question has had no reply for 5 minutes, or when someone asks a question and nobody else has written in the group for 10 minutes and nobody is in its audio room. It stays out of messages that need a person, and when a message sounds like a crisis it only points to the Help button and 112.
 
 Add these in Vercel **Settings > Environment Variables**, then redeploy:
 
