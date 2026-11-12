@@ -1,16 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { authPost } from "@/lib/api";
+import { MASCOT_NAME, TAG_RE, isQuestion } from "@/lib/mascot-shared";
 import { supabase } from "@/lib/supabase";
 import { avatarVar, initials } from "@/lib/session";
 import { useToast } from "./ui";
 
-type Msg = { id: number; alias: string; handle: string; body: string; created_at: string };
-const COLS = "id,alias,handle,body,created_at";
+type Msg = { id: number; alias: string; handle: string; body: string; created_at: string; anonymous?: boolean; is_ai?: boolean };
+const COLS = "id,alias,handle,body,created_at,anonymous,is_ai";
 const BLOCKED = /(\+?\d[\d\s\-]{6,}\d)|https?:\/\/|www\./i; // same rule as the database; this just gives a quicker message
 
-const Avatar = ({ name }: { name: string }) => (
-  <span className="av" style={{ "--s": "30px", background: avatarVar(name) } as React.CSSProperties} aria-hidden="true">{initials(name)}</span>
+const Avatar = ({ name, kind }: { name: string; kind?: "ai" | "anon" }) => (
+  <span className={`av${kind === "ai" ? " av-ai" : ""}`} style={{ "--s": "30px", background: kind === "anon" ? "var(--muted)" : avatarVar(name) } as React.CSSProperties} aria-hidden="true">
+    {kind === "ai" ? "✦" : kind === "anon" ? "?" : initials(name)}
+  </span>
 );
 
 /** Text chat for one group. Saved for 7 days, then deleted. Audio is never recorded. */
@@ -18,6 +22,9 @@ export default function GroupChat({ roomId, alias, isHost, compact }: { roomId: 
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [text, setText] = useState("");
   const [loaded, setLoaded] = useState(false);
+  const [anon, setAnon] = useState(false);
+  const [mine, setMine] = useState<Set<number>>(new Set()); // my own anonymous messages
+  const [thinking, setThinking] = useState(false);
   const end = useRef<HTMLDivElement>(null);
   const { say, toast } = useToast();
 
@@ -34,6 +41,8 @@ export default function GroupChat({ roomId, alias, isHost, compact }: { roomId: 
     const since = new Date(Date.now() - 7 * 86400_000).toISOString();
     const { data } = await supabase().from("messages").select(COLS).eq("room_id", roomId).gt("created_at", since).order("id", { ascending: false }).limit(100);
     setMsgs(((data ?? []) as Msg[]).reverse());
+    const own = await supabase().rpc("my_anon_message_ids", { p_room: roomId });
+    if (Array.isArray(own.data)) setMine(new Set(own.data as number[]));
     setLoaded(true);
   }, [roomId]);
 
@@ -55,13 +64,22 @@ export default function GroupChat({ roomId, alias, isHost, compact }: { roomId: 
     if (!body) return;
     if (BLOCKED.test(body)) { say("Phone numbers and links aren't allowed. It keeps everyone safe."); return; }
     setText("");
-    const { data, error } = await supabase().from("messages").insert({ room_id: roomId, alias, body }).select(COLS).single();
-    if (error) {
+    const { data, error } = await supabase().rpc("post_message", { p_room: roomId, p_body: body, p_anonymous: anon });
+    if (error || !data) {
       setText(body);
-      say(error.message.includes("slow_down") ? "Slow down a little." : error.code === "23514" ? "Phone numbers and links aren't allowed." : "Message didn't send. Try again.");
+      const m = error?.message ?? "";
+      say(m.includes("slow_down") ? "Slow down a little." : error?.code === "23514" ? "Phone numbers and links aren't allowed." : "Message didn't send. Try again.");
       return;
     }
-    merge([data as Msg]);
+    const sent = data as Msg;
+    if (sent.anonymous) setMine((s) => new Set(s).add(sent.id));
+    merge([sent]);
+    // The mascot may answer if it was tagged, or if this is a question and nobody else is around.
+    if (TAG_RE.test(body) || isQuestion(body)) {
+      const tagged = TAG_RE.test(body);
+      if (tagged) setThinking(true);
+      authPost("/api/mascot", { roomId, messageId: sent.id }).catch(() => {}).finally(() => { if (tagged) setThinking(false); });
+    }
   }
 
   async function report(m: Msg) {
@@ -81,28 +99,35 @@ export default function GroupChat({ roomId, alias, isHost, compact }: { roomId: 
       <div className={`panel${compact ? "" : " tall"}`} role="log" aria-live="polite">
         {loaded && msgs.length === 0 && <p className="empty">No messages yet. Be kind. Chat is for support, not contact details.</p>}
         {msgs.map((m) => {
-          const mine = m.alias === alias;
+          const own = m.alias === alias || mine.has(m.id);
+          const ai = !!m.is_ai;
           return (
-            <div className={`msg${mine ? " me" : ""}`} key={m.id}>
-              <Avatar name={m.handle} />
+            <div className={`msg${own ? " me" : ""}${ai ? " ai" : ""}`} key={m.id}>
+              <Avatar name={m.handle} kind={ai ? "ai" : m.anonymous ? "anon" : undefined} />
               <div className="bub">
-                <div className="who">{mine ? "You" : m.handle}</div>
+                <div className="who">{ai ? <>{MASCOT_NAME} <span className="aitag">AI helper</span></> : own ? (m.anonymous ? "You (shown as Anonymous)" : "You") : m.handle}</div>
                 <p>{m.body}</p>
                 <div className="msg-acts">
-                  {!mine && <button onClick={() => report(m)}>Report</button>}
-                  {(mine || isHost) && <button onClick={() => remove(m)}>Delete</button>}
+                  {!own && <button onClick={() => report(m)}>{ai ? "Report this reply" : "Report"}</button>}
+                  {(own || isHost) && <button onClick={() => remove(m)}>Delete</button>}
                 </div>
               </div>
             </div>
           );
         })}
+        {thinking && <p className="fine typing" role="status">{MASCOT_NAME} is thinking…</p>}
         <div ref={end} />
       </div>
       <form className="chatform" onSubmit={send}>
         <input className="field" value={text} onChange={(e) => setText(e.target.value)} maxLength={240} placeholder="Write something kind…" autoComplete="off" aria-label="Message" />
         <button className="btn primary" type="submit" aria-label="Send">Send</button>
       </form>
-      <p className="fine">Messages disappear after 7 days. Audio is never recorded.</p>
+      <div className="chat-opts">
+        <label className="check"><input type="checkbox" checked={anon} onChange={(e) => setAnon(e.target.checked)} />Send as Anonymous</label>
+        <button type="button" className="btn ghost sm" onClick={() => setText((t) => (TAG_RE.test(t) ? t : `@${MASCOT_NAME} ${t}`))}>✦ Ask {MASCOT_NAME}</button>
+      </div>
+      <p className="fine">Messages disappear after 7 days. Audio is never recorded. Anonymous messages hide your name from the group, but hosts can still act on abuse.</p>
+      <p className="fine">{MASCOT_NAME} is an AI helper, not a therapist. Messages sent to {MASCOT_NAME} are processed by AI services (Gemini, DeepSeek), so never share personal details. In an emergency call 112.</p>
     </div>
   );
 }

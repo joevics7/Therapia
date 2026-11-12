@@ -191,7 +191,7 @@ export async function POST(req: Request) {
         const u = await db.from("room_members").update({ banned }).eq("room_id", id).eq("alias", alias);
         if (u.error) return bad("Couldn't update.", 500);
         if (banned) {
-          await db.from("messages").delete().eq("room_id", id).eq("alias", alias);
+          await db.rpc("delete_alias_messages", { p_room: id, p_alias: alias }); // includes their anonymous posts
           const lk = livekitEnv();
           if (lk) { try { await new RoomServiceClient(lk.httpUrl, lk.key, lk.secret).removeParticipant(id, alias); } catch { /* not in the audio room */ } }
         }
