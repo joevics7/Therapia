@@ -213,6 +213,80 @@ export async function POST(req: Request) {
         return J({ ok: true });
       }
 
+      // ---------- therapists ----------
+      case "therapists.list": {
+        const [t, s] = await Promise.all([
+          db.from("therapists").select("id,name,role,bio,tags,languages,price_ngn,pal,active,created_at").order("created_at"),
+          db.from("therapist_slots").select("id,therapist_id,starts_at,booked").gte("starts_at", new Date().toISOString()).order("starts_at"),
+        ]);
+        return J({ therapists: t.data ?? [], slots: s.data ?? [] });
+      }
+      case "therapist.save": {
+        const id = str(b.id, 40);
+        const name = str(b.name, 60), role = str(b.role, 60), bio = str(b.bio, 400), languages = str(b.languages, 60) || "English";
+        const tags = (Array.isArray(b.tags) ? b.tags : []).map((x) => str(x, 24)).filter(Boolean).slice(0, 6);
+        const price = Number(b.price_ngn), pal = str(b.pal, 1) || "a";
+        if (name.length < 2) return bad("Enter the therapist's name.");
+        if (role.length < 2) return bad("Enter their title, such as Clinical psychologist.");
+        if (!Number.isInteger(price) || price < 0 || price > 1_000_000) return bad("Enter the session price in naira.");
+        if (!PALS.includes(pal)) return bad("Bad colour.");
+        const fields = { name, role, bio: bio || null, tags, languages, price_ngn: price, pal, active: b.active !== false };
+        if (id) {
+          if (!ROOM_ID.test(id)) return bad("Bad request.");
+          const u = await db.from("therapists").update(fields).eq("id", id).select("id").maybeSingle();
+          if (u.error || !u.data) return bad("Couldn't save.", 500);
+          return J({ ok: true, id });
+        }
+        let newId = slug(name), n = 2;
+        while ((await db.from("therapists").select("id").eq("id", newId).maybeSingle()).data) newId = `${slug(name).slice(0, 26)}-${n++}`;
+        const c = await db.from("therapists").insert({ id: newId, ...fields }).select("id").single();
+        if (c.error) return bad("Couldn't add the therapist.", 500);
+        return J({ ok: true, id: newId });
+      }
+      case "therapist.delete": {
+        const id = str(b.id, 40);
+        if (!ROOM_ID.test(id)) return bad("Bad request.");
+        const open = await db.from("bookings").select("id", { count: "exact", head: true }).eq("pro_id", id).in("status", ["requested", "confirmed"]);
+        if ((open.count ?? 0) > 0) return bad("This therapist has open bookings. Cancel them first, or untick Visible to hide the profile.", 409);
+        const d = await db.from("therapists").delete().eq("id", id);
+        if (d.error) return bad("Couldn't delete.", 500);
+        return J({ ok: true });
+      }
+      case "slot.add": {
+        const id = str(b.therapist_id, 40), at = new Date(str(b.starts_at, 40));
+        if (!ROOM_ID.test(id) || Number.isNaN(at.getTime()) || at.getTime() < Date.now()) return bad("Pick a date and time in the future.");
+        const r = await db.from("therapist_slots").insert({ therapist_id: id, starts_at: at.toISOString() });
+        if (r.error) return bad(r.error.code === "23505" ? "That time is already added." : "Couldn't add that time.", r.error.code === "23505" ? 409 : 500);
+        return J({ ok: true });
+      }
+      case "slot.delete": {
+        const id = str(b.id, 40);
+        if (!UUID.test(id)) return bad("Bad request.");
+        const r = await db.from("therapist_slots").delete().eq("id", id).eq("booked", false).select("id");
+        if (!r.data?.length) return bad("That time is booked. Cancel the booking first.", 409);
+        return J({ ok: true });
+      }
+
+      // ---------- bookings ----------
+      case "bookings.list": {
+        const r = await db.from("bookings").select("id,user_id,pro_name,slot,plan,price_ngn,status,created_at,slot_id").order("created_at", { ascending: false }).limit(200);
+        const rows = r.data ?? [];
+        const ids = [...new Set(rows.map((x) => x.user_id))];
+        const u = ids.length ? await db.from("profiles").select("user_id,username").in("user_id", ids) : { data: [] };
+        const name = new Map((u.data ?? []).map((x: { user_id: string; username: string | null }) => [x.user_id, x.username]));
+        return J({ bookings: rows.map(({ user_id, ...x }) => ({ ...x, username: name.get(user_id) ?? "unknown" })) });
+      }
+      case "booking.set": {
+        const id = str(b.id, 40), status = str(b.status, 12);
+        if (!UUID.test(id) || !["requested", "confirmed", "cancelled"].includes(status)) return bad("Bad request.");
+        const cur = await db.from("bookings").select("slot_id,status").eq("id", id).maybeSingle();
+        if (!cur.data) return bad("Booking not found.", 404);
+        const u = await db.from("bookings").update({ status }).eq("id", id);
+        if (u.error) return bad("Couldn't update.", 500);
+        if (status === "cancelled" && cur.data.slot_id) await db.from("therapist_slots").update({ booked: false }).eq("id", cur.data.slot_id);
+        return J({ ok: true });
+      }
+
       // ---------- reports ----------
       case "reports.list": {
         const r = await db.from("reports").select("id,room_id,reason,body_snapshot,created_at").eq("status", "open").order("created_at", { ascending: false }).limit(100);

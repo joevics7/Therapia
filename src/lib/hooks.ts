@@ -37,16 +37,19 @@ export function useBookings() {
     supabase().from("bookings").select("id,pro_id,pro_name,slot,plan,price_ngn,status").order("created_at", { ascending: false })
       .then(({ data }) => setList((data ?? []) as Booking[]));
   }, [uid]);
-  const add = useCallback(async (b: Omit<Booking, "id" | "status">) => {
-    const { data, error } = await supabase().from("bookings").insert(b).select("id,pro_id,pro_name,slot,plan,price_ngn,status").single();
-    if (error || !data) return false;
+  const add = useCallback(async (therapist: string, slot: string, plan: "one" | "month"): Promise<{ ok: true } | { ok: false; code: string }> => {
+    const { data, error } = await supabase().rpc("book_session", { p_therapist: therapist, p_slot: slot, p_plan: plan });
+    if (error || !data) {
+      const code = ["not_signed_in", "bad_plan", "not_found", "too_many", "slot_taken"].find((c) => error?.message?.includes(c)) ?? "failed";
+      return { ok: false, code };
+    }
     setList((l) => [data as Booking, ...l]);
-    return true;
+    return { ok: true };
   }, []);
   const cancel = useCallback(async (id: string) => {
-    const { error } = await supabase().from("bookings").update({ status: "cancelled" }).eq("id", id);
-    if (!error) setList((l) => l.map((x) => (x.id === id ? { ...x, status: "cancelled" } : x)));
-    return !error;
+    const { data, error } = await supabase().rpc("cancel_booking", { p_id: id });
+    if (!error && data) setList((l) => l.map((x) => (x.id === id ? { ...x, status: "cancelled" } : x)));
+    return !error && !!data;
   }, []);
   return { list, add, cancel, signedIn: !!uid };
 }
@@ -116,4 +119,23 @@ export function useRoom(id: string) {
     return () => { stop = true; };
   }, [id]);
   return state;
+}
+
+export type Therapist = { id: string; name: string; role: string; bio: string | null; tags: string[]; languages: string; price_ngn: number; pal: string };
+export type FreeSlot = { id: string; therapist_id: string; starts_at: string };
+
+export function useTherapists() {
+  const [list, setList] = useState<Therapist[] | null>(null);
+  const [slots, setSlots] = useState<FreeSlot[]>([]);
+  const load = useCallback(async () => {
+    const db = supabase();
+    const [t, s] = await Promise.all([
+      db.from("therapists").select("id,name,role,bio,tags,languages,price_ngn,pal").order("created_at"),
+      db.from("therapist_slots").select("id,therapist_id,starts_at").eq("booked", false).gte("starts_at", new Date().toISOString()).order("starts_at"),
+    ]);
+    setList((t.data ?? []) as Therapist[]);
+    setSlots((s.data ?? []) as FreeSlot[]);
+  }, []);
+  useEffect(() => { load(); }, [load]);
+  return { list, slots, reload: load };
 }

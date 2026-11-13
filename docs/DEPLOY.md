@@ -79,3 +79,13 @@ Privacy: the AI sees only the last few messages in the group, labelled Member A,
 3. Every 5 minutes the database checks for due reminders and calls `/api/reminders/dispatch` on `https://therapia-three.vercel.app` (job `send-reminders`). If the site address changes, reschedule that job and `mascot-sweep` with the new address.
 
 Notes: iPhone and iPad only allow notifications after the site is added to the Home Screen (Share, then Add to Home Screen). Someone who blocks notifications in the browser has to allow them again in browser settings.
+
+## Therapists and bookings
+
+Therapists, their available times and bookings live in the database and are managed in `/admin` under **Therapists**.
+
+- Three sample therapists are seeded as **hidden**. Edit each one (name, title, topics, price) and tick **Visible** to show them to members.
+- Members can only book times you add under "Available times". Times are Nigeria time (WAT).
+- Bookings are listed at the bottom of the Therapists tab. Admins see the member's username there. Confirm after you have been paid, or cancel to free the time.
+- The app does not take payment yet.
+- The library (`LIB` in `src/lib/data.ts`) is still sample content.

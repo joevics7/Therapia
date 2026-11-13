@@ -1,12 +1,4 @@
-// Sample content for the MVP. Real therapists, titles and prices come from the database later.
-export type Pro = { id: string; name: string; role: string; tags: string[]; lang: string; price: number; slots: string[]; pal: "a" | "b" | "c" | "d" | "e" };
-export const PROS: Pro[] = [
-  { id: "t1", name: "Dr Amaka Obi", role: "Clinical psychologist", tags: ["Marriage", "Trauma"], lang: "English, Igbo, Pidgin", price: 8000, slots: ["Today 4:00 PM", "Today 6:30 PM", "Tomorrow 10:00 AM"], pal: "b" },
-  { id: "t2", name: "Mr Seyi Adeyemi", role: "Addiction counsellor", tags: ["Addiction"], lang: "English, Yoruba", price: 5000, slots: ["Tomorrow 10:00 AM", "Fri 2:00 PM", "Sat 11:00 AM"], pal: "a" },
-  { id: "t3", name: "Mrs Hauwa Bello", role: "Marriage and family therapist", tags: ["Marriage", "Grief"], lang: "English, Hausa", price: 6000, slots: ["Today 6:30 PM", "Fri 5:00 PM", "Sat 9:00 AM"], pal: "c" },
-  { id: "t4", name: "Dr Efe Okoro", role: "Counselling psychologist", tags: ["Anxiety", "Trauma"], lang: "English, Pidgin", price: 7000, slots: ["Fri 2:00 PM", "Sat 1:00 PM", "Mon 4:00 PM"], pal: "e" },
-];
-export const PRO_FILTERS = ["All", "Marriage", "Addiction", "Trauma", "Anxiety", "Grief"];
+// Sample library content. Therapists live in the database and are edited in /admin.
 
 export type LibItem = { id: string; type: "Book" | "Read" | "Audio"; title: string; blurb: string; len: string; price: string; pal: "a" | "b" | "c" | "d" | "e" };
 export const LIB: LibItem[] = [

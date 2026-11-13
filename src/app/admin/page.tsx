@@ -8,6 +8,7 @@ import { useToast } from "@/components/ui";
 import { authPost } from "@/lib/api";
 import { fmtLagos } from "@/lib/rooms";
 import { supabase } from "@/lib/supabase";
+import { Therapists } from "./Therapists";
 
 type Room = { id: string; title: string; cat: string; host_name: string; host_id: string | null; women_only: boolean; men_only: boolean; pal: string; schedule_text: string | null; days: number[]; start_time: string | null; active: boolean };
 type Fac = { user_id: string; username: string; display_name: string | null };
@@ -64,7 +65,7 @@ function Admin() {
   const { say, toast } = useToast();
   const [data, setData] = useState<Overview | null>(null);
   const [denied, setDenied] = useState(false);
-  const [tab, setTab] = useState<"groups" | "people" | "reports">("groups");
+  const [tab, setTab] = useState<"groups" | "people" | "therapists" | "reports">("groups");
   const [edit, setEdit] = useState<Room | null>(null);
 
   const call: Call = useCallback(async (action, body = {}) => {
@@ -91,7 +92,7 @@ function Admin() {
         <span className="row"><Link className="btn ghost sm" href="/dashboard">App</Link><button className="btn ghost sm" onClick={() => signOut()}>Sign out</button></span>
       </div>
       <div className="seg" role="tablist" aria-label="Admin sections">
-        {([["groups", "Groups"], ["people", "Facilitators"], ["reports", "Reports"]] as const).map(([k, l]) => (
+        {([["groups", "Groups"], ["people", "Facilitators"], ["therapists", "Therapists"], ["reports", "Reports"]] as const).map(([k, l]) => (
           <button key={k} type="button" aria-pressed={tab === k} onClick={() => { setTab(k); setEdit(null); }}>{l}</button>
         ))}
       </div>
@@ -99,6 +100,7 @@ function Admin() {
         ? <GroupEditor key={edit.id || "new"} start={edit} data={data} call={call} say={say} onClose={() => setEdit(null)} onChanged={load} />
         : <GroupList data={data} onEdit={setEdit} />)}
       {tab === "people" && <Facilitators data={data} call={call} say={say} onChanged={load} />}
+      {tab === "therapists" && <Therapists call={call} say={say} />}
       {tab === "reports" && <Reports data={data} call={call} say={say} />}
     </div>
   );
