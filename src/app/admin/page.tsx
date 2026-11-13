@@ -9,13 +9,14 @@ import { authPost } from "@/lib/api";
 import { fmtLagos } from "@/lib/rooms";
 import { supabase } from "@/lib/supabase";
 import { Therapists } from "./Therapists";
+import JoinRequests from "@/components/JoinRequests";
 
 type Room = { id: string; title: string; cat: string; host_name: string; host_id: string | null; women_only: boolean; men_only: boolean; pal: string; schedule_text: string | null; days: number[]; start_time: string | null; active: boolean };
 type Fac = { user_id: string; username: string; display_name: string | null };
 type Sess = { id: string; room_id: string; starts_at: string; note: string | null };
 type Code = { room_id: string; expires_at: string | null };
 type Overview = { rooms: Room[]; facilitators: Fac[]; codes: Code[]; sessions: Sess[]; counts: Record<string, { members: number; banned: number }> };
-type Mem = { alias: string; handle: string; banned: boolean; joined_at: string };
+type Mem = { alias: string; handle: string; banned: boolean; joined_at: string; invited_by?: string | null };
 type Rep = { id: string; room_id: string; reason: string; body_snapshot: string | null; created_at: string; vent_id?: number | null };
 type Call = (action: string, body?: object) => Promise<{ ok: boolean; data: Record<string, unknown> }>;
 
@@ -284,13 +285,14 @@ function Members({ room, call, say, onChanged }: { room: Room; call: Call; say: 
   return (
     <div className="card stack">
       <h2 className="sec-h display" style={{ margin: 0 }}>Members ({list?.length ?? "…"})</h2>
+      <JoinRequests roomId={room.id} say={say} onChanged={load} />
       <p className="muted">Members appear by the name they use in this group. Accounts behind those names are not shown.</p>
       <input className="field" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search a name" aria-label="Search members" />
       {list && shown.length === 0 && <p className="fine">No members found.</p>}
       <div className="adm-scroll">
         {shown.map((m) => (
           <div className="row adm-line" key={m.alias}>
-            <span><b>{m.handle}</b> <span className="fine">joined {fmtLagos(m.joined_at)}</span>{m.banned && <span className="badge"> Banned</span>}</span>
+            <span><b>{m.handle}</b> <span className="fine">joined {fmtLagos(m.joined_at)}{m.invited_by ? ` · invited by ${(list ?? []).find((x) => x.alias === m.invited_by)?.handle ?? "a member"}` : ""}</span>{m.banned && <span className="badge"> Banned</span>}</span>
             <button className="btn ghost sm" onClick={() => ban(m, !m.banned)}>{m.banned ? "Lift ban" : "Ban"}</button>
           </div>
         ))}

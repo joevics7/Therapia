@@ -97,3 +97,10 @@ Therapists, their available times and bookings live in the database and are mana
 - Voice notes are stored privately in the Supabase Storage bucket `vent-voice` and played through short-lived links, only for group members. They are deleted after 30 days (daily database job). Leftover files are cleaned hourly by `/api/vent/cleanup`.
 - Wording that suggests self-harm or abuse is flagged in the host's and admin's Reports list (labelled "Vent") and the author sees a private help card. Hosts can see who wrote a flagged or reported post, as with chat.
 - Reports on Vent posts use the same Delete / Ban / Dismiss actions as chat.
+
+## Invitation links
+
+- Every member has a personal invitation link per group (the **+ Invite** button in the group). They can copy or share it, switch it off, or make a new one.
+- Open groups: the person joins straight away. Closed groups (password or women-only): they send a join request, and the host or admin approves or declines it. Requests appear under the group in Host tools and in the group's Members card in /admin.
+- Hosts and admins see who invited each person (in the request, and in the Members list). The invited person is told they were invited by a member. Other members never see it.
+- Switching a link off, banning the inviter, or deactivating the group stops it working.

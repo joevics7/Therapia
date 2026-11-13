@@ -5,6 +5,7 @@ import { CRISIS_STEPS } from "@/lib/help";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { useToast } from "@/components/ui";
+import JoinRequests from "@/components/JoinRequests";
 import { fmtLagos, ROOM_COLS, type RoomDef, toRoom } from "@/lib/rooms";
 import { supabase } from "@/lib/supabase";
 
@@ -134,6 +135,8 @@ function HostRoom({ room, sessions, reload, say }: { room: RoomDef; sessions: Se
         <Link className="btn accent sm" href={`/room/${room.id}`}>Go live</Link>
         <Link className="btn ghost sm" href={`/chat/${room.id}`}>Open chat</Link>
       </div>
+
+      <JoinRequests roomId={room.id} say={say} />
 
       <div className="stack">
         <label htmlFor={`s-${room.id}`} className="eyebrow">Regular schedule (shown to everyone)</label>

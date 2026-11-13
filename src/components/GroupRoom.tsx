@@ -11,6 +11,8 @@ import { useQuickExit } from "./QuickExit";
 import RoomView from "./RoomView";
 import { HelpSheet } from "./ui";
 import Vent from "./Vent";
+import InviteSheet from "./InviteSheet";
+import { supabase } from "@/lib/supabase";
 
 type Tab = "meeting" | "chat" | "vent";
 type Joined = { token: string; url: string };
@@ -25,6 +27,8 @@ export default function GroupRoom({ room, start }: { room: RoomDef; start: Tab }
   const [tab, setTab] = useState<Tab>(start);
   const [code, setCode] = useState("");
   const [help, setHelp] = useState(false);
+  const [invite, setInvite] = useState(false);
+  const [reqStatus, setReqStatus] = useState<string | null>(null);
   const [live, setLive] = useState(false);
   const [joined, setJoined] = useState<Joined | null>(null);
   const [connecting, setConnecting] = useState(false);
@@ -45,6 +49,12 @@ export default function GroupRoom({ room, start }: { room: RoomDef; start: Tab }
     const t = setInterval(tick, 6000);
     return () => { stop = true; clearInterval(t); };
   }, [member, joined, room.id]);
+
+  // Someone who asked to join through an invitation sees where their request stands.
+  useEffect(() => {
+    if (member || !checked) return;
+    supabase().rpc("my_join_request", { p_room: room.id }).then(({ data }) => setReqStatus(typeof data === "string" ? data : null));
+  }, [member, checked, room.id]);
 
   async function enterAudio() {
     if (busyTok.current) return;
@@ -81,6 +91,8 @@ export default function GroupRoom({ room, start }: { room: RoomDef; start: Tab }
         <div className="topbar"><Link className="btn ghost sm" href="/groups">← Groups</Link></div>
         <div className={`hero ankara pal-${room.pal}`} aria-hidden="true" style={{ height: 110 }} />
         {header}
+        {reqStatus === "pending" && <div className="card" role="status"><p><b>Your request to join is waiting for the host.</b> You&rsquo;ll be able to open this group once it&rsquo;s approved.</p></div>}
+        {reqStatus === "declined" && <div className="card" role="status"><p>The host didn&rsquo;t approve your request to join this group.</p></div>}
         <form className="card" onSubmit={(e) => { e.preventDefault(); join(code); }}>
           <p>Join this group to chat, vent and take part in its meetings. You will appear as <b>{username || "…"}</b>.</p>
           {needCode && (
@@ -140,9 +152,10 @@ export default function GroupRoom({ room, start }: { room: RoomDef; start: Tab }
     <div className={tab === "meeting" && joined ? "pg-wide" : "pg-narrow"}>
       <div className="topbar">
         <Link className="btn ghost sm" href="/groups">← Groups</Link>
-        <span className="row"><button className="pill-help" onClick={() => setHelp(true)}>♥ Help</button><button className="btn ghost sm" onClick={quickExit}>Quick exit</button></span>
+        <span className="row"><button className="btn soft sm" onClick={() => setInvite(true)}>+ Invite</button><button className="pill-help" onClick={() => setHelp(true)}>♥ Help</button><button className="btn ghost sm" onClick={quickExit}>Quick exit</button></span>
       </div>
       {help && <HelpSheet onClose={() => setHelp(false)} />}
+      {invite && <InviteSheet roomId={room.id} title={room.title} onClose={() => setInvite(false)} />}
       {header}
       <div className="tabs roomtabs" role="tablist">
         <button className="tab" role="tab" aria-selected={tab === "meeting"} onClick={() => setTab("meeting")}>Meeting{(joined || live) && <span className="count">●</span>}</button>

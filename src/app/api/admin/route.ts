@@ -197,7 +197,7 @@ export async function POST(req: Request) {
         const id = str(b.room_id, 40);
         if (!ROOM_ID.test(id)) return bad("Bad request.");
         // Only the group name and alias are shown. Account ids and usernames behind a name are never sent to the screen.
-        const r = await db.from("room_members").select("alias,handle,banned,joined_at").eq("room_id", id).order("joined_at", { ascending: false }).limit(500);
+        const r = await db.from("room_members").select("alias,handle,banned,joined_at,invited_by").eq("room_id", id).order("joined_at", { ascending: false }).limit(500);
         return J({ members: r.data ?? [] });
       }
       case "member.ban": {
