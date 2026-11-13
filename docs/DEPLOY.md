@@ -89,3 +89,11 @@ Therapists, their available times and bookings live in the database and are mana
 - Bookings are listed at the bottom of the Therapists tab. Admins see the member's username there. Confirm after you have been paid, or cancel to free the time.
 - The app does not take payment yet.
 - The library (`LIB` in `src/lib/data.ts`) is still sample content.
+
+## Group room and Vent
+
+- A group is one screen with three tabs: **Meeting**, **Chat** and **Vent**. Chat and Vent always work. The Meeting tab shows "Waiting for the facilitator" until they join, then members get a "Join the live meeting" button. `/chat/<id>` and `/room/<id>` open the same screen.
+- **Vent** is private to the group's members. Posts can be text or a voice note (up to 60 seconds). Members can add several reactions (❤️ 🙏 🤗 😂 💪 😢), reply by quoting, and mark a post "Just venting" so it can only get reactions. The username is hidden unless the member chooses to show it.
+- Voice notes are stored privately in the Supabase Storage bucket `vent-voice` and played through short-lived links, only for group members. They are deleted after 30 days (daily database job). Leftover files are cleaned hourly by `/api/vent/cleanup`.
+- Wording that suggests self-harm or abuse is flagged in the host's and admin's Reports list (labelled "Vent") and the author sees a private help card. Hosts can see who wrote a flagged or reported post, as with chat.
+- Reports on Vent posts use the same Delete / Ban / Dismiss actions as chat.

@@ -9,7 +9,7 @@ import { fmtLagos, ROOM_COLS, type RoomDef, toRoom } from "@/lib/rooms";
 import { supabase } from "@/lib/supabase";
 
 type Session = { id: string; room_id: string; starts_at: string; note: string | null };
-type Report = { id: string; room_id: string; reason: string; body_snapshot: string | null; created_at: string };
+type Report = { id: string; room_id: string; reason: string; body_snapshot: string | null; created_at: string; vent_id?: number | null };
 
 export default function Host() {
   const { ready, role, signOut } = useAuth();
@@ -30,7 +30,7 @@ export default function Host() {
     const [r, s, p] = await Promise.all([
       sb.from("rooms").select(ROOM_COLS).in("id", list).order("created_at"),
       sb.from("sessions").select("id,room_id,starts_at,note").in("room_id", list).gte("starts_at", since).order("starts_at"),
-      sb.from("reports").select("id,room_id,reason,body_snapshot,created_at").in("room_id", list).eq("status", "open").order("created_at", { ascending: false }),
+      sb.from("reports").select("id,room_id,reason,body_snapshot,created_at,vent_id").in("room_id", list).eq("status", "open").order("created_at", { ascending: false }),
     ]);
     setRooms(((r.data ?? []) as Record<string, unknown>[]).map(toRoom));
     setSessions((s.data ?? []) as Session[]);
@@ -75,7 +75,7 @@ export default function Host() {
           <h2 className="sec-h display">Reports to review <span className="count">{reports.length}</span></h2>
           {reports.map((rep) => (
             <div className="rep" key={rep.id}>
-              <div className="fine">{rooms.find((r) => r.id === rep.room_id)?.title} · {fmtLagos(rep.created_at)}</div>
+              <div className="fine">{rooms.find((r) => r.id === rep.room_id)?.title} · {rep.vent_id ? "Vent · " : ""}{fmtLagos(rep.created_at)}</div>
               <blockquote>{rep.body_snapshot ?? "(message unavailable)"}</blockquote>
               {rep.reason && <p className="muted">Reason: {rep.reason}</p>}
               <div className="row">

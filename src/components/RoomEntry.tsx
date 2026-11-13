@@ -4,8 +4,7 @@ import Link from "next/link";
 import { useRoom } from "@/lib/hooks";
 import RequireAuth from "./RequireAuth";
 import { supabaseConfigured } from "@/lib/supabase";
-import ChatClient from "./ChatClient";
-import RoomClient from "./RoomClient";
+import GroupRoom from "./GroupRoom";
 
 function Gate({ id, children }: { id: string; children: (room: NonNullable<ReturnType<typeof useRoom>["room"]>) => React.ReactNode }) {
   const { room, status } = useRoom(id);
@@ -15,5 +14,5 @@ function Gate({ id, children }: { id: string; children: (room: NonNullable<Retur
   return <>{children(room)}</>;
 }
 
-export const LiveRoomEntry = ({ id }: { id: string }) => <RequireAuth><Gate id={id}>{(room) => <RoomClient room={room} />}</Gate></RequireAuth>;
-export const ChatEntry = ({ id }: { id: string }) => <RequireAuth><Gate id={id}>{(room) => <ChatClient room={room} />}</Gate></RequireAuth>;
+export const LiveRoomEntry = ({ id }: { id: string }) => <RequireAuth><Gate id={id}>{(room) => <GroupRoom room={room} start="meeting" />}</Gate></RequireAuth>;
+export const ChatEntry = ({ id }: { id: string }) => <RequireAuth><Gate id={id}>{(room) => <GroupRoom room={room} start="chat" />}</Gate></RequireAuth>;

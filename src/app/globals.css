@@ -427,3 +427,26 @@ button, input { font: inherit; color: inherit; }
 .aitag { display: inline-block; margin-left: 4px; padding: 1px 7px; border-radius: 999px; background: var(--indigo); color: #fff; font-size: 11px; font-weight: 700; vertical-align: middle; }
 .chat-opts { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
 .typing { padding: 4px 6px; }
+
+/* ---- group room tabs and vent ---- */
+.roomtabs { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 4px 0; }
+.vent { display: grid; gap: 12px; }
+.ventform { display: grid; gap: 10px; }
+.vent-opts { display: flex; gap: 16px; flex-wrap: wrap; }
+.vent-list { display: grid; gap: 10px; }
+.ventpost { display: grid; gap: 8px; }
+.vp-head { gap: 8px; align-items: center; flex-wrap: wrap; }
+.vp-body { white-space: pre-wrap; overflow-wrap: anywhere; }
+.quoted { margin: 0; padding: 6px 10px; border-left: 3px solid var(--line); color: var(--muted); font-size: 14px; overflow-wrap: anywhere; }
+.quote-bar { display: flex; justify-content: space-between; gap: 8px; background: var(--surface2); border-radius: 10px; padding: 6px 10px; font-size: 14px; }
+.quote-bar button { border: 0; background: transparent; cursor: pointer; color: var(--muted); }
+.reactions { display: flex; flex-wrap: wrap; gap: 6px; }
+.rx { min-height: 36px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; font-size: 16px; display: inline-flex; align-items: center; gap: 4px; }
+.rx span { font-size: 13px; font-weight: 700; }
+.rx[aria-pressed="true"] { background: color-mix(in srgb, var(--sun) 30%, var(--surface)); border-color: var(--sun); }
+.vent-audio { width: 100%; }
+.recording { gap: 10px; align-items: center; }
+.recdot { width: 10px; height: 10px; border-radius: 50%; background: #d33; animation: pulse 1s infinite; }
+@keyframes pulse { 50% { opacity: .3; } }
+.carecard { border-color: var(--indigo); display: grid; gap: 8px; }
+.meetcard { display: grid; gap: 12px; }

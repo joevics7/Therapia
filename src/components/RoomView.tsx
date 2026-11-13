@@ -10,9 +10,6 @@ import { useStored } from "@/lib/store";
 import { VoiceProcessor, isVoiceId, type VoiceId } from "@/lib/voice";
 import { MAX_SPEAKERS, type RoomDef } from "@/lib/rooms";
 import { avatarVar, initials } from "@/lib/session";
-import GroupChat from "./GroupChat";
-import { useQuickExit } from "./QuickExit";
-import { HelpSheet } from "./ui";
 
 type Hand = { identity: string; name: string };
 const enc = new TextEncoder();
@@ -25,22 +22,19 @@ const Avatar = ({ name, size }: { name: string; size: number }) => (
   <span className="av" style={{ "--s": `${size}px`, background: avatarVar(name) } as React.CSSProperties} aria-hidden="true">{initials(name)}</span>
 );
 
-type Props = { room: RoomDef; host: boolean; alias: string; token: string; onLeave: () => void };
+type Props = { room: RoomDef; host: boolean; token: string; onLeave: () => void };
 
-export default function RoomView({ room, host, alias, token, onLeave }: Props) {
+export default function RoomView({ room, host, token, onLeave }: Props) {
   const lk = useRoomContext();
-  const { exit: quickExit } = useQuickExit();
   const participants = useParticipants();
   const { localParticipant, isMicrophoneEnabled } = useLocalParticipant();
   const [, bump] = useState(0);
-  const [tab, setTab] = useState<"chat" | "hands">("chat");
   const [hands, setHands] = useState<Hand[]>([]);
   const [myHand, setMyHand] = useState(false);
   const [toast, setToast] = useState("");
   const [voiceRaw, setVoice] = useStored<VoiceId>("voice", "natural");
   const voice: VoiceId = isVoiceId(voiceRaw) ? voiceRaw : "natural";
   const proc = useRef<VoiceProcessor | null>(null);
-  const [help, setHelp] = useState(false);
   const toastT = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const say = useCallback((m: string) => {
@@ -152,17 +146,11 @@ export default function RoomView({ room, host, alias, token, onLeave }: Props) {
   const speaking = (p?: Participant) => !!p?.isSpeaking;
 
   return (
-    <div className="pg-wide room">
+    <div className="room meet">
       {toast && <div className="toast" role="status" aria-live="polite">{toast}</div>}
-      <div className="topbar">
-        <button className="btn ghost sm" onClick={() => { lk.disconnect(); onLeave(); }}>Leave quietly</button>
-        {hostP ? <span className="livepill"><i />Live</span> : <span className="fine">Waiting for host</span>}
-        <span className="row"><button className="pill-help" onClick={() => setHelp(true)}>♥ Help</button><button className="btn ghost sm" onClick={() => { lk.disconnect(); onLeave(); quickExit(); }}>Quick exit</button></span>
-      </div>
-      {help && <HelpSheet onClose={() => setHelp(false)} />}
-      <div>
-        <h1 className="display ptitle" style={{ fontSize: 22 }}>{room.title}</h1>
-        <p className="fine">{room.cat}{room.women ? " · Women only" : ""}</p>
+      <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+        <span className="livepill"><i />{hostP ? "Live now" : "Host is joining…"}</span>
+        <button className="btn ghost sm" onClick={() => { lk.disconnect(); onLeave(); }}>Leave the meeting</button>
       </div>
 
       {host && (
@@ -182,7 +170,7 @@ export default function RoomView({ room, host, alias, token, onLeave }: Props) {
             <div><span className="nm">{hostP.name}</span><div className="fine">Host · facilitator</div></div>
           </div>
         ) : (
-          <p className="muted">Waiting for the host to arrive. Stay here, the room starts when they join.</p>
+          <p className="muted">Waiting for the host to arrive.</p>
         )}
         <div className="guests">
           {[0, 1, 2].map((i) => {
@@ -201,13 +189,8 @@ export default function RoomView({ room, host, alias, token, onLeave }: Props) {
       </div>
 
       <div className="room-side">
-      <div className="tabs" role="tablist">
-        <button className="tab" role="tab" aria-selected={tab === "chat"} onClick={() => setTab("chat")}>Room chat</button>
-        <button className="tab" role="tab" aria-selected={tab === "hands"} onClick={() => setTab("hands")}>Raised hands<span className="count">{hands.length}</span></button>
-      </div>
-
-      <div hidden={tab !== "chat"}><GroupChat roomId={room.id} alias={alias} isHost={host} compact /></div>
-      <div className="panel" hidden={tab !== "hands"}>
+      <h2 className="sec-h display" style={{ margin: 0, fontSize: 17 }}>Raised hands<span className="count">{hands.length}</span></h2>
+      <div className="panel">
         {hands.length === 0 && <p className="empty">No hands up right now.</p>}
         {hands.map((h) => (
           <div className="hand-row" key={h.identity}>

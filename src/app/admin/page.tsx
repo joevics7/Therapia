@@ -16,7 +16,7 @@ type Sess = { id: string; room_id: string; starts_at: string; note: string | nul
 type Code = { room_id: string; expires_at: string | null };
 type Overview = { rooms: Room[]; facilitators: Fac[]; codes: Code[]; sessions: Sess[]; counts: Record<string, { members: number; banned: number }> };
 type Mem = { alias: string; handle: string; banned: boolean; joined_at: string };
-type Rep = { id: string; room_id: string; reason: string; body_snapshot: string | null; created_at: string };
+type Rep = { id: string; room_id: string; reason: string; body_snapshot: string | null; created_at: string; vent_id?: number | null };
 type Call = (action: string, body?: object) => Promise<{ ok: boolean; data: Record<string, unknown> }>;
 
 const BLANK: Room = { id: "", title: "", cat: "", host_name: "", host_id: null, women_only: false, men_only: false, pal: "a", schedule_text: "", days: [], start_time: "19:00", active: true };
@@ -371,7 +371,7 @@ function Reports({ data, call, say }: { data: Overview; call: Call; say: (m: str
       {list && list.length === 0 && <p className="muted">No open reports. 🎉</p>}
       {(list ?? []).map((r) => (
         <div className="card stack" key={r.id}>
-          <div className="fine">{title(r.room_id)} · {fmtLagos(r.created_at)}</div>
+          <div className="fine">{title(r.room_id)} · {r.vent_id ? "Vent · " : ""}{fmtLagos(r.created_at)}</div>
           {r.body_snapshot && <blockquote className="adm-quote">{r.body_snapshot}</blockquote>}
           {r.reason && <p className="muted">Reason: {r.reason}</p>}
           <div className="row" style={{ flexWrap: "wrap", gap: 8 }}>

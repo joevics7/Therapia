@@ -289,7 +289,7 @@ export async function POST(req: Request) {
 
       // ---------- reports ----------
       case "reports.list": {
-        const r = await db.from("reports").select("id,room_id,reason,body_snapshot,created_at").eq("status", "open").order("created_at", { ascending: false }).limit(100);
+        const r = await db.from("reports").select("id,room_id,reason,body_snapshot,created_at,vent_id").eq("status", "open").order("created_at", { ascending: false }).limit(100);
         return J({ reports: r.data ?? [] });
       }
       case "report.resolve": {
