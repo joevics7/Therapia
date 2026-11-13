@@ -5,7 +5,8 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { PageHead, useToast } from "@/components/ui";
 import { useReminders, useRooms } from "@/lib/hooks";
-import type { RoomDef } from "@/lib/rooms";
+import { enablePush, pushMessage, pushState } from "@/lib/push";
+import { hostLabel, type RoomDef } from "@/lib/rooms";
 
 export default function Groups() {
   const rooms = useRooms();
@@ -29,8 +30,16 @@ export default function Groups() {
 
   const remind = async (r: RoomDef) => {
     if (authError) { say("Reminders need an account, which isn't ready yet."); return; }
+    if (!on[r.id]) {
+      // Turning a reminder on needs permission to show notifications on this device.
+      const st = pushState();
+      if (st !== "ready") { say(pushMessage[st]); return; }
+      let ok = false;
+      try { ok = await enablePush(); } catch { ok = false; }
+      if (!ok) { say(pushState() === "denied" ? pushMessage.denied : "Notifications weren't allowed, so we can't remind you."); return; }
+    }
     const x = await toggle(r.id);
-    say(!x.ok ? "Couldn't save that. Try again." : x.now ? "We'll remind you before it starts." : "Reminder removed.");
+    say(!x.ok ? "Couldn't save that. Try again." : x.now ? "Done. We'll send a notification about 15 minutes before each session." : "Reminder removed.");
   };
 
   const list = rooms ?? [];
@@ -43,7 +52,7 @@ export default function Groups() {
       <div>
         <div className="rc-cat">{r.cat}</div>
         <h3 className="display">{r.title}</h3>
-        <div className="rc-host">{r.host}</div>
+        <div className="rc-host">{hostLabel(r.host)}</div>
         <div className="rc-meta">
           {r.id in live ? (<><span className="livepill"><i />Live</span><span>{live[r.id]} listening</span></>) : (<span style={{ fontWeight: 700 }}>{r.next ? `Next: ${r.next}` : `${r.when} WAT`}</span>)}
           {r.women && <span className="badge hib">Women only</span>}
@@ -66,7 +75,7 @@ export default function Groups() {
       {rooms === null && <p className="muted">Loading groups…</p>}
       {liveRooms.length > 0 && <section className="sec"><h2 className="sec-h display"><span className="livepill"><i />Live</span>Live now</h2>{liveRooms.map(card)}</section>}
       {rooms !== null && <section className="sec"><h2 className="sec-h display">All groups</h2>{rest.map(card)}</section>}
-      <p className="fine">Times are Lagos time (WAT). A room goes live when its host joins. Group chat is text only and messages disappear after 7 days.</p>
+      <p className="fine">Times are Lagos time (WAT). A room goes live when its host joins. Reminders arrive as a notification on this device, about 15 minutes before a session, and never name the group. Group chat is text only and messages disappear after 7 days.</p>
     </>
   );
 }

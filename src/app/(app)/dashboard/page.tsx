@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { HelpSheet } from "@/components/ui";
 import { AFFIRM, MOODS, MOOD_MSG, TOOLS } from "@/lib/data";
 import { useRooms } from "@/lib/hooks";
+import { hostLabel } from "@/lib/rooms";
 import { useAuth } from "@/components/AuthProvider";
 import { avatarVar, initials } from "@/lib/session";
 import { dayKey, useStored } from "@/lib/store";
@@ -95,7 +96,7 @@ export default function Dashboard() {
           {liveRooms.map((r) => (
             <article key={r.id} className={`rcard pal-${r.pal}`}>
               <div className="tile ankara" aria-hidden="true" />
-              <div><div className="rc-cat">{r.cat}</div><h3 className="display">{r.title}</h3><div className="rc-host">{r.host} · {live[r.id]} listening</div></div>
+              <div><div className="rc-cat">{r.cat}</div><h3 className="display">{r.title}</h3><div className="rc-host">{hostLabel(r.host)} · {live[r.id]} listening</div></div>
               <div className="rc-act"><Link className="btn accent sm" href={`/room/${r.id}`}>Join</Link></div>
             </article>
           ))}

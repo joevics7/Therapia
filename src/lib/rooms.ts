@@ -32,3 +32,7 @@ export const fmtLagos = (iso: string) =>
 
 export const MAX_SPEAKERS = 4; // host + 3 guests
 export const MAX_LISTENERS = 200;
+
+/** Groups with no facilitator assigned yet are saved as "To be assigned". */
+export const UNASSIGNED = "To be assigned";
+export const hostLabel = (h: string) => (h === UNASSIGNED ? "Facilitator to be announced" : `Hosted by ${h}`);

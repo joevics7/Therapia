@@ -6,7 +6,7 @@ import { LiveKitRoom, RoomAudioRenderer } from "@livekit/components-react";
 import { useEffect, useRef, useState } from "react";
 import { authPost } from "@/lib/api";
 import { useMembership, type Member } from "@/lib/join";
-import type { RoomDef } from "@/lib/rooms";
+import { hostLabel, type RoomDef, UNASSIGNED } from "@/lib/rooms";
 import RoomView from "./RoomView";
 
 type Joined = { token: string; url: string; me: Member };
@@ -93,13 +93,13 @@ export default function RoomClient({ room }: { room: RoomDef }) {
       <div>
         <div className="rc-cat">{room.cat}</div>
         <h1 className="display ptitle" style={{ fontSize: 26 }}>{room.title}</h1>
-        <p className="muted">Hosted by {room.host} · {room.next ?? room.when}{room.next ? "" : " WAT"}</p>
+        <p className="muted">{hostLabel(room.host)} · {room.next ?? room.when}{room.next ? "" : " WAT"}</p>
         {room.women && <p style={{ marginTop: 8 }}><span className="badge hib">Women only</span></p>}
       </div>
       {waiting && (
         <div className="card waitcard" role="status" aria-live="polite">
           <p className="display" style={{ fontSize: 20, margin: 0 }}>Waiting for the facilitator</p>
-          <p className="muted">The audio room opens when {room.host} arrives. You are in the group. Keep this page open and we will take you in the moment they join.</p>
+          <p className="muted">{room.host === UNASSIGNED ? "The audio room opens once a facilitator is assigned and joins." : `The audio room opens when ${room.host} arrives.`} You are in the group. Keep this page open and we will take you in the moment they join.</p>
           <Link className="btn accent big" href={`/chat/${room.id}`}>Chat with the group while you wait</Link>
           <button className="btn ghost" type="button" onClick={() => setWaiting(null)}>Stop waiting</button>
         </div>

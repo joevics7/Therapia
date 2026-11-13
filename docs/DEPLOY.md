@@ -69,3 +69,13 @@ Add these in Vercel **Settings > Environment Variables**, then redeploy:
 Every minute the database checks for unanswered questions and calls `/api/mascot/sweep` on `https://therapia-three.vercel.app`. If your site address changes, update the `mascot-sweep` job in Supabase (SQL Editor: `select cron.alter_job(...)`, or unschedule it and schedule it again with the new address).
 
 Privacy: the AI sees only the last few messages in the group, labelled Member A, B, C, with no usernames or ids. The text still goes to the AI companies, so check each company's data terms for the plan you use. Free tiers may use data to improve their products.
+
+## Reminders (browser notifications)
+
+"Remind me" on a group sends a notification to the person's device about 15 minutes before each session, even when Therapia is closed. Sessions come from the group's weekly schedule (days and time, set in `/admin`) and from its dated sessions. The notification never names the group, because it can be read on a lock screen.
+
+1. Make a VAPID key pair (once): `npx web-push generate-vapid-keys`.
+2. In Vercel add `NEXT_PUBLIC_VAPID_PUBLIC_KEY` (the public key), `VAPID_PRIVATE_KEY` (the private key, keep it secret) and `VAPID_SUBJECT` (for example `mailto:you@example.com`). Redeploy.
+3. Every 5 minutes the database checks for due reminders and calls `/api/reminders/dispatch` on `https://therapia-three.vercel.app` (job `send-reminders`). If the site address changes, reschedule that job and `mascot-sweep` with the new address.
+
+Notes: iPhone and iPad only allow notifications after the site is added to the Home Screen (Share, then Add to Home Screen). Someone who blocks notifications in the browser has to allow them again in browser settings.

@@ -14,6 +14,16 @@ const str = (v: unknown, max = 200) => (typeof v === "string" ? v.trim().slice(0
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const PALS = ["a", "b", "c", "d", "e"];
 
+const DAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+/** "Tue & Thu · 8:00 PM" from days (0=Sunday) and a 24-hour time. */
+function scheduleText(days: number[], time: string) {
+  if (!days.length || !time) return "";
+  const [h, m] = time.split(":").map(Number);
+  const t = `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
+  const names = days.length === 7 ? ["Daily"] : days.map((d) => DAY[d]);
+  const when = names.length > 1 ? `${names.slice(0, -1).join(", ")} & ${names[names.length - 1]}` : names[0];
+  return `${when} · ${t}`;
+}
 const slug = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 30) || "group";
 
 /**
@@ -43,7 +53,7 @@ export async function POST(req: Request) {
       // ---------- read everything the screen needs ----------
       case "overview": {
         const [rooms, profs, codes, sess] = await Promise.all([
-          db.from("rooms").select("id,title,cat,host_name,host_id,women_only,men_only,pal,schedule_text,active,created_at").order("created_at"),
+          db.from("rooms").select("id,title,cat,host_name,host_id,women_only,men_only,pal,schedule_text,days,start_time,active,created_at").order("created_at"),
           db.from("profiles").select("user_id,username,display_name").eq("role", "facilitator").order("created_at"),
           db.from("room_codes").select("room_id,expires_at,updated_at"),
           db.from("sessions").select("id,room_id,starts_at,note").gte("starts_at", new Date(Date.now() - 3600_000).toISOString()).order("starts_at"),
@@ -107,7 +117,12 @@ export async function POST(req: Request) {
       // ---------- groups ----------
       case "group.save": {
         const id = str(b.id, 40);
-        const title = str(b.title, 60), cat = str(b.cat, 30), schedule = str(b.schedule_text, 60);
+        const title = str(b.title, 60), cat = str(b.cat, 30);
+        const days = Array.isArray(b.days) ? [...new Set(b.days.map(Number))].filter((d) => Number.isInteger(d) && d >= 0 && d <= 6).sort((x, y) => x - y) : [];
+        const time = str(b.start_time, 5);
+        if (time && !/^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(time)) return bad("Enter a valid start time.");
+        if (days.length && !time) return bad("Set a start time for the days you picked.");
+        const schedule = scheduleText(days, time);
         const pal = str(b.pal, 1) || "a";
         if (title.length < 3) return bad("Give the group a name (at least 3 letters).");
         if (cat.length < 2) return bad("Add a topic, such as Grief or Betting.");
@@ -121,7 +136,7 @@ export async function POST(req: Request) {
           if (!f?.data || f.data.role !== "facilitator") return bad("Pick a facilitator from the list.");
           hostId = hid; hostName = f.data.display_name || f.data.username || "Facilitator";
         }
-        const fields = { title, cat, schedule_text: schedule, pal, women_only: women, men_only: men, host_id: hostId, host_name: hostName, active: b.active !== false };
+        const fields = { title, cat, schedule_text: schedule, days, start_time: days.length ? time : null, pal, women_only: women, men_only: men, host_id: hostId, host_name: hostName, active: b.active !== false };
         if (id) {
           if (!ROOM_ID.test(id)) return bad("Bad request.");
           const u = await db.from("rooms").update(fields).eq("id", id).select("id").maybeSingle();

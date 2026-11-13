@@ -9,7 +9,7 @@ import { authPost } from "@/lib/api";
 import { fmtLagos } from "@/lib/rooms";
 import { supabase } from "@/lib/supabase";
 
-type Room = { id: string; title: string; cat: string; host_name: string; host_id: string | null; women_only: boolean; men_only: boolean; pal: string; schedule_text: string | null; active: boolean };
+type Room = { id: string; title: string; cat: string; host_name: string; host_id: string | null; women_only: boolean; men_only: boolean; pal: string; schedule_text: string | null; days: number[]; start_time: string | null; active: boolean };
 type Fac = { user_id: string; username: string; display_name: string | null };
 type Sess = { id: string; room_id: string; starts_at: string; note: string | null };
 type Code = { room_id: string; expires_at: string | null };
@@ -18,7 +18,7 @@ type Mem = { alias: string; handle: string; banned: boolean; joined_at: string }
 type Rep = { id: string; room_id: string; reason: string; body_snapshot: string | null; created_at: string };
 type Call = (action: string, body?: object) => Promise<{ ok: boolean; data: Record<string, unknown> }>;
 
-const BLANK: Room = { id: "", title: "", cat: "", host_name: "", host_id: null, women_only: false, men_only: false, pal: "a", schedule_text: "", active: true };
+const BLANK: Room = { id: "", title: "", cat: "", host_name: "", host_id: null, women_only: false, men_only: false, pal: "a", schedule_text: "", days: [], start_time: "19:00", active: true };
 const PALS = ["a", "b", "c", "d", "e"];
 
 /** Email + password sign-in for admins. There is no sign-up here. Accounts are made by the site owner in Supabase. */
@@ -176,7 +176,16 @@ function GroupEditor({ start, data, call, say, onClose, onChanged }: { start: Ro
             {data.facilitators.map((x) => <option key={x.user_id} value={x.user_id}>{x.display_name || x.username}</option>)}
           </select>
         </label>
-        <label className="stack"><span className="eyebrow">Usual time (shown on the group)</span><input className="field" value={f.schedule_text ?? ""} maxLength={60} onChange={(e) => set("schedule_text", e.target.value)} placeholder="e.g. Tue & Thu · 8:00 PM" /></label>
+        <div className="stack"><span className="eyebrow">Weekly schedule (Nigeria time)</span>
+          <div className="row" style={{ flexWrap: "wrap", gap: 6 }}>
+            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d, i) => (
+              <button key={d} type="button" className={`btn sm ${f.days.includes(i) ? "primary" : "ghost"}`} aria-pressed={f.days.includes(i)}
+                onClick={() => set("days", f.days.includes(i) ? f.days.filter((x) => x !== i) : [...f.days, i].sort())}>{d}</button>
+            ))}
+          </div>
+          <input className="field" type="time" style={{ maxWidth: 160 }} value={f.start_time ?? ""} onChange={(e) => set("start_time", e.target.value)} aria-label="Start time" />
+          <p className="fine">Members get a reminder about 15 minutes before each of these times (and before any dated session below). Leave all days off for groups that only meet on dated sessions.</p>
+        </div>
         <div className="row" style={{ flexWrap: "wrap", gap: 16 }}>
           <label className="check"><input type="checkbox" checked={f.women_only} onChange={(e) => setF((x) => ({ ...x, women_only: e.target.checked, men_only: e.target.checked ? false : x.men_only }))} />Women only (always needs a password)</label>
           <label className="check"><input type="checkbox" checked={f.men_only} onChange={(e) => setF((x) => ({ ...x, men_only: e.target.checked, women_only: e.target.checked ? false : x.women_only }))} />Men only</label>
