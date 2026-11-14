@@ -33,6 +33,7 @@ export default function GroupRoom({ room, start }: { room: RoomDef; start: Tab }
   const [joined, setJoined] = useState<Joined | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [connErr, setConnErr] = useState("");
+  const [declined, setDeclined] = useState(false); // the member chose to leave this live meeting
   const busyTok = useRef(false);
 
   // Is the facilitator in? Checked every few seconds while we are not already in the audio.
@@ -74,7 +75,14 @@ export default function GroupRoom({ room, start }: { room: RoomDef; start: Tab }
     }
   }
 
-  const leaveAudio = () => { setJoined(null); setLive(false); };
+  const leaveAudio = (manual = false) => { setJoined(null); setLive(false); if (manual) setDeclined(true); };
+
+  // Members go straight into the live meeting when it is on and they are looking at the Meeting tab. No extra button.
+  useEffect(() => { if (!live) setDeclined(false); }, [live]);
+  useEffect(() => {
+    if (member && !member.isHost && tab === "meeting" && live && !joined && !declined) enterAudio();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [member, tab, live, joined, declined]);
   const header = (
     <div>
       <div className="rc-cat">{room.cat}{room.women ? " · Women only" : ""}</div>
@@ -117,7 +125,7 @@ export default function GroupRoom({ room, start }: { room: RoomDef; start: Tab }
       audio={false}
       video={false}
       options={{ publishDefaults: { dtx: true } }}
-      onDisconnected={leaveAudio}
+      onDisconnected={() => leaveAudio(false)}
       onError={() => setConnErr("Connection problem. Check your data.")}
     >
       <RoomAudioRenderer />
@@ -133,9 +141,8 @@ export default function GroupRoom({ room, start }: { room: RoomDef; start: Tab }
   ) : live ? (
     <div className="card meetcard" role="status" aria-live="polite">
       <p className="display" style={{ fontSize: 20, margin: 0 }}><span className="livepill"><i />Live now</span></p>
-      <p className="muted">The facilitator is here. You join as a listener, and can raise your hand when you want to speak.</p>
-      {connErr && <p className="err" role="alert">{connErr}</p>}
-      <button className="btn accent big" onClick={enterAudio} disabled={connecting}>{connecting ? "Connecting…" : "Join the live meeting"}</button>
+      {declined ? <p className="muted">You left the meeting.</p> : connErr ? <p className="err" role="alert">{connErr}</p> : <p className="muted">Joining the live meeting…</p>}
+      {(declined || connErr) && <button className="btn accent big" onClick={() => { setDeclined(false); enterAudio(); }} disabled={connecting}>{connecting ? "Connecting…" : declined ? "Rejoin the meeting" : "Try again"}</button>}
     </div>
   ) : (
     <div className="card meetcard" role="status" aria-live="polite">

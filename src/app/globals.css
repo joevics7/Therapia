@@ -453,3 +453,13 @@ button, input { font: inherit; color: inherit; }
 .level { height: 6px; width: 100%; min-width: 48px; border-radius: 999px; background: var(--surface2); overflow: hidden; margin-top: 4px; }
 .level i { display: block; height: 100%; background: var(--green); transition: width .12s linear; }
 .microw { display: grid; gap: 6px; flex: 1; }
+.lgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 12px 8px; }
+.ltile { display: grid; justify-items: center; gap: 4px; text-align: center; min-width: 0; }
+.ltile .nm { font-size: 12px; font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lav { position: relative; display: inline-block; }
+.handbadge { position: absolute; right: -8px; top: -8px; font-size: 18px; }
+.mutedbtn { display: grid; gap: 2px; min-height: 64px; background: var(--ink); color: var(--bg); font-size: 18px; }
+.mutedbtn small { font-size: 13px; font-weight: 500; opacity: .85; }
+.mutedbtn.up { background: var(--sun); color: var(--on-sun); }
+.voicebox summary { cursor: pointer; font-weight: 600; font-size: 14px; color: var(--muted); padding: 6px 0; }
+.meet .dock { position: sticky; bottom: 0; background: var(--bg); z-index: 4; padding-bottom: max(8px, env(safe-area-inset-bottom, 0px)); }

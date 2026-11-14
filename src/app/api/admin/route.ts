@@ -1,10 +1,11 @@
 import { RoomServiceClient } from "livekit-server-sdk";
 import { NextResponse } from "next/server";
 import { adminClient } from "@/lib/admin";
-import { emailFor, passwordProblem, usernameProblem } from "@/lib/identity";
+import { passwordProblem, usernameProblem } from "@/lib/identity";
 import { bearer, livekitEnv, ROOM_ID } from "@/lib/server";
 import { userClient } from "@/lib/supabase";
 
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -66,18 +67,25 @@ export async function POST(req: Request) {
           ]);
           return [r.id, { members: all.count ?? 0, banned: banned.count ?? 0 }] as const;
         }));
-        return J({ rooms: list, facilitators: profs.data ?? [], codes: codes.data ?? [], sessions: sess.data ?? [], counts: Object.fromEntries(counts) });
+        // A real email is shown when the facilitator has one. Members' internal addresses are never shown.
+        const facs = await Promise.all((profs.data ?? []).map(async (f: { user_id: string }) => {
+          const u = await db.auth.admin.getUserById(f.user_id);
+          const em = u.data.user?.email ?? "";
+          return { ...f, email: em && !em.endsWith(".invalid") ? em : null };
+        }));
+        return J({ rooms: list, facilitators: facs, codes: codes.data ?? [], sessions: sess.data ?? [], counts: Object.fromEntries(counts) });
       }
 
       // ---------- facilitators ----------
       case "facilitator.create": {
         const username = str(b.username, 20), password = typeof b.password === "string" ? b.password : "", name = str(b.display_name, 40);
-        const problem = usernameProblem(username) || passwordProblem(password) || (name.length < 2 ? "Enter the facilitator's display name." : null);
+        const email = str(b.email, 120).toLowerCase();
+        const problem = usernameProblem(username) || passwordProblem(password) || (name.length < 2 ? "Enter the facilitator's display name." : null) || (EMAIL.test(email) ? null : "Enter a valid email address.");
         if (problem) return bad(problem);
         const taken = await db.from("profiles").select("user_id").ilike("username", username).maybeSingle();
         if (taken.data) return bad("That username is taken.", 409);
-        const made = await db.auth.admin.createUser({ email: emailFor(username), password, email_confirm: true, user_metadata: { username } });
-        if (made.error || !made.data.user) return bad("Couldn't create that account.", 500);
+        const made = await db.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { username } });
+        if (made.error || !made.data.user) return bad(/already|registered|exists/i.test(made.error?.message ?? "") ? "That email is already used by another account." : "Couldn't create that account.", /already|registered|exists/i.test(made.error?.message ?? "") ? 409 : 500);
         const id = made.data.user.id;
         const up = await db.from("profiles").update({ username, role: "facilitator", display_name: name }).eq("user_id", id);
         if (up.error) { await db.auth.admin.deleteUser(id); return bad("Couldn't create that account.", 500); }
@@ -94,6 +102,12 @@ export async function POST(req: Request) {
           const u = await db.from("profiles").update({ display_name: name }).eq("user_id", id);
           if (u.error) return bad("Couldn't save.", 500);
           await db.from("rooms").update({ host_name: name }).eq("host_id", id); // groups show the new name
+        }
+        if (typeof b.email === "string" && b.email.trim()) {
+          const email = b.email.trim().toLowerCase();
+          if (!EMAIL.test(email) || email.length > 120) return bad("Enter a valid email address.");
+          const r = await db.auth.admin.updateUserById(id, { email, email_confirm: true });
+          if (r.error) return bad(/already|registered|exists/i.test(r.error.message) ? "That email is already used by another account." : "Couldn't change the email.", /already|registered|exists/i.test(r.error.message) ? 409 : 500);
         }
         if (typeof b.password === "string" && b.password) {
           const p = passwordProblem(b.password);

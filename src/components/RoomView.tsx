@@ -1,13 +1,12 @@
 "use client";
 
 import { StartAudio, useLocalParticipant, useParticipants, useRoomContext } from "@livekit/components-react";
-import { type Participant, RoomEvent } from "livekit-client";
+import { LocalAudioTrack, type Participant, RoomEvent, Track } from "livekit-client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Track, createLocalAudioTrack, type LocalAudioTrack } from "livekit-client";
 import { authPost } from "@/lib/api";
 import { VoicePicker } from "./VoicePicker";
 import { useStored } from "@/lib/store";
-import { VoiceProcessor, isVoiceId, type VoiceId } from "@/lib/voice";
+import { buildVoiceGraph, isVoiceId, VOICES, type VoiceGraph, type VoiceId } from "@/lib/voice";
 import { MAX_SPEAKERS, type RoomDef } from "@/lib/rooms";
 import { avatarVar, initials } from "@/lib/session";
 
@@ -32,8 +31,13 @@ function Level({ p }: { p?: Participant }) {
   return <div className="level" aria-hidden="true"><i style={{ width: `${Math.min(100, Math.round(v * 160))}%` }} /></div>;
 }
 
-type Props = { room: RoomDef; host: boolean; token: string; onLeave: () => void };
+type Pipe = { mic: MediaStream; ctx: AudioContext; graph: VoiceGraph; track: LocalAudioTrack };
+type Props = { room: RoomDef; host: boolean; token: string; onLeave: (manual?: boolean) => void };
 
+/**
+ * The live meeting, laid out like an audio space: speakers on top, everyone else listed below as listeners,
+ * and one big button at the bottom that shows whether you are muted and lets you ask to speak.
+ */
 export default function RoomView({ room, host, token, onLeave }: Props) {
   const lk = useRoomContext();
   const participants = useParticipants();
@@ -44,7 +48,8 @@ export default function RoomView({ room, host, token, onLeave }: Props) {
   const [toast, setToast] = useState("");
   const [voiceRaw, setVoice] = useStored<VoiceId>("voice", "natural");
   const voice: VoiceId = isVoiceId(voiceRaw) ? voiceRaw : "natural";
-  const proc = useRef<VoiceProcessor | null>(null);
+  const pipe = useRef<Pipe | null>(null);
+  const [micBusy, setMicBusy] = useState(false);
   const toastT = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const say = useCallback((m: string) => {
@@ -61,20 +66,42 @@ export default function RoomView({ room, host, token, onLeave }: Props) {
   );
   const hostP = speakers.find((p) => roleOf(p) === "host");
   const guests = speakers.filter((p) => roleOf(p) !== "host");
-  const listenerCount = participants.length - speakers.length;
+  const listeners = participants.filter((p) => !speakers.includes(p));
+  const handSet = new Set(hands.map((h) => h.identity));
+  const sortedListeners = [...listeners].sort((a, b) => Number(handSet.has(b.identity)) - Number(handSet.has(a.identity)));
 
   const send = useCallback((topic: string, payload: object) => {
     return lk.localParticipant.publishData(enc.encode(JSON.stringify(payload)), { reliable: true, topic });
+  }, [lk]);
+
+  const stopMic = useCallback(async () => {
+    const p = pipe.current;
+    if (!p) return;
+    pipe.current = null;
+    try { await lk.localParticipant.unpublishTrack(p.track, true); } catch { /* already gone */ }
+    p.graph.dispose();
+    p.mic.getTracks().forEach((t) => t.stop());
+    p.ctx.close().catch(() => {});
+    bump((n) => n + 1);
+  }, [lk]);
+
+  // Everyone sees who is muted, speaking, and who is in the room, so refresh when any of that changes.
+  useEffect(() => {
+    const again = () => bump((n) => n + 1);
+    const evs = [RoomEvent.ActiveSpeakersChanged, RoomEvent.TrackMuted, RoomEvent.TrackUnmuted, RoomEvent.TrackPublished, RoomEvent.TrackUnpublished, RoomEvent.LocalTrackPublished, RoomEvent.LocalTrackUnpublished];
+    evs.forEach((e) => lk.on(e, again));
+    return () => { evs.forEach((e) => lk.off(e, again)); };
   }, [lk]);
 
   // raised hands travel over the live audio connection (no storage)
   useEffect(() => {
     const onData = (payload: Uint8Array, p?: Participant, _k?: unknown, topic?: string) => {
       if (!p || topic !== "hand") return;
-      let d: { type?: string };
+      let d: { type?: string; to?: string };
       try { d = JSON.parse(dec.decode(payload)); } catch { return; }
       if (d.type === "raise") setHands((h) => (h.some((x) => x.identity === p.identity) ? h : [...h, { identity: p.identity, name: p.name || "Guest" }]));
       if (d.type === "lower") setHands((h) => h.filter((x) => x.identity !== p.identity));
+      if (d.type === "declined" && roleOf(p) === "host" && d.to === lk.localParticipant.identity) { setMyHand(false); say("The host can't bring you up right now."); }
     };
     const onLeft = (p: Participant) => setHands((h) => h.filter((x) => x.identity !== p.identity));
     const onJoined = () => { if (myHand) send("hand", { type: "raise" }).catch(() => {}); }; // lets a late host see raised hands
@@ -83,7 +110,7 @@ export default function RoomView({ room, host, token, onLeave }: Props) {
       if (p.permissions?.canPublish) setHands((h) => h.filter((x) => x.identity !== p.identity));
       if (p === lk.localParticipant) {
         if (p.permissions?.canPublish) { setMyHand(false); say("You can speak now. Tap the mic when you're ready."); }
-        else { lk.localParticipant.setMicrophoneEnabled(false).catch(() => {}); }
+        else stopMic();
       }
     };
     lk.on(RoomEvent.DataReceived, onData);
@@ -96,7 +123,9 @@ export default function RoomView({ room, host, token, onLeave }: Props) {
       lk.off(RoomEvent.ParticipantConnected, onJoined);
       lk.off(RoomEvent.ParticipantPermissionsChanged, onPerm);
     };
-  }, [lk, myHand, send, say]);
+  }, [lk, myHand, send, say, stopMic]);
+
+  useEffect(() => () => { stopMic(); }, [stopMic]);
 
   async function control(action: "allow" | "revoke" | "remove" | "end", identity?: string, useToken = false) {
     const r = await authPost("/api/room-control", { action, roomId: room.id, identity, token: useToken ? token : undefined });
@@ -104,9 +133,13 @@ export default function RoomView({ room, host, token, onLeave }: Props) {
     return r.ok;
   }
 
-  async function invite(h: Hand) {
-    if (speakers.length >= MAX_SPEAKERS) { say("Stage is full. Ask someone to step down first."); return; }
+  async function invite(h: Participant) {
+    if (speakers.length >= MAX_SPEAKERS) { say("The stage is full. Move someone back to listeners first."); return; }
     if (await control("allow", h.identity)) setHands((x) => x.filter((y) => y.identity !== h.identity));
+  }
+  function decline(h: Participant) {
+    setHands((x) => x.filter((y) => y.identity !== h.identity));
+    send("hand", { type: "declined", to: h.identity }).catch(() => {});
   }
 
   async function toggleHand() {
@@ -116,44 +149,47 @@ export default function RoomView({ room, host, token, onLeave }: Props) {
     if (next) say("Hand raised. The host will see it.");
   }
 
-  // The voice effect is attached BEFORE the track is published, so your natural voice is never sent by mistake.
+  // The microphone goes through our own voice effect first, and only the changed voice is ever published.
   async function toggleMic() {
+    if (micBusy) return;
+    if (pipe.current) { await stopMic(); return; }
+    setMicBusy(true);
+    let mic: MediaStream | null = null;
+    const ctx = new AudioContext(); // created inside the tap so phones allow it
     try {
-      if (isMicrophoneEnabled) {
-        await localParticipant.setMicrophoneEnabled(false);
-        proc.current = null;
-        return;
+      mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+      if (ctx.state === "suspended") await ctx.resume();
+      const dest = ctx.createMediaStreamDestination();
+      const graph = await buildVoiceGraph(ctx, ctx.createMediaStreamSource(mic), dest, voice);
+      if (VOICES[voice].pitch !== 1 && !graph.pitchAvailable) {
+        graph.dispose();
+        throw new Error("no_pitch"); // never fall back to someone's natural voice by accident
       }
-      const track: LocalAudioTrack = await createLocalAudioTrack();
-      if (voice !== "natural") {
-        const p = new VoiceProcessor(voice);
-        try { await track.setProcessor(p); proc.current = p; }
-        catch { track.stop(); say("Your voice effect couldn't start, so the mic stayed off."); return; }
-      }
-      await localParticipant.publishTrack(track, { source: Track.Source.Microphone });
-    } catch { say("Couldn't reach your microphone. Check your browser's permission."); }
+      const track = new LocalAudioTrack(dest.stream.getAudioTracks()[0], undefined, false);
+      await lk.localParticipant.publishTrack(track, { source: Track.Source.Microphone });
+      pipe.current = { mic, ctx, graph, track };
+      bump((n) => n + 1);
+    } catch (e) {
+      mic?.getTracks().forEach((t) => t.stop());
+      ctx.close().catch(() => {});
+      say((e as Error).message === "no_pitch" ? "This phone can't change your voice that way, so the mic stayed off. Pick Natural or Bass boost." : "Couldn't reach your microphone. Check your browser's permission.");
+    } finally {
+      setMicBusy(false);
+    }
   }
 
   // Changing the voice while speaking updates the live effect.
-  useEffect(() => {
-    const pub = localParticipant.getTrackPublication(Track.Source.Microphone);
-    const track = pub?.track as LocalAudioTrack | undefined;
-    if (!track) return;
-    const cur = track.getProcessor();
-    if (cur instanceof VoiceProcessor) { cur.setVoice(voice); return; }
-    if (voice !== "natural") {
-      const p = new VoiceProcessor(voice);
-      track.setProcessor(p).then(() => { proc.current = p; }).catch(() => {});
-    }
-  }, [voice, localParticipant, isMicrophoneEnabled]);
+  useEffect(() => { pipe.current?.graph.setVoice(voice); }, [voice]);
 
   async function stepDown() {
-    await localParticipant.setMicrophoneEnabled(false).catch(() => {});
+    await stopMic();
     if (await control("revoke", undefined, true)) say("You stepped down. Still listening.");
   }
 
-  async function endRoom() { if (await control("end")) onLeave(); }
+  async function endRoom() { if (await control("end")) onLeave(false); }
   const speaking = (p?: Participant) => !!p?.isSpeaking;
+  const you = (p: Participant) => p === localParticipant;
+  const mic = (p: Participant) => (you(p) ? isMicrophoneEnabled : p.isMicrophoneEnabled);
 
   return (
     <div className="room meet">
@@ -161,80 +197,90 @@ export default function RoomView({ room, host, token, onLeave }: Props) {
       <StartAudio label="Tap to turn on sound" className="btn accent big" />
       <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
         <span className="livepill"><i />{hostP ? "Live now" : "Host is joining…"}</span>
-        <button className="btn ghost sm" onClick={() => { lk.disconnect(); onLeave(); }}>Leave the meeting</button>
+        <button className="btn ghost sm" onClick={() => { lk.disconnect(); onLeave(true); }}>Leave quietly</button>
       </div>
 
       {host && (
         <div className="hostbar">
           <span className="eyebrow">Host tools</span>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
             <button className="btn soft sm" onClick={endRoom}>End room for everyone</button>
+            {hands.length > 0 && <span className="badge">✋ {hands.length} hand{hands.length === 1 ? "" : "s"} up</span>}
           </div>
         </div>
       )}
 
-      <div className="room-cols">
-      <div className="stage">
+      <section className="stage" aria-label="Speakers">
+        <div className="eyebrow">Speakers</div>
         {hostP ? (
           <div className={`member host${speaking(hostP) ? " speaking" : ""}`}>
             <Avatar name={hostP.name || "Host"} size={64} />
-            <div style={{ flex: 1, minWidth: 0 }}><span className="nm">{hostP === localParticipant ? "You" : hostP.name}</span><div className="fine">Host · facilitator{speaking(hostP) ? " · speaking" : ""}</div><Level p={hostP} /></div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <span className="nm">{you(hostP) ? "You" : hostP.name}</span>
+              <div className="fine">Host · facilitator {mic(hostP) ? "· 🎙 mic on" : "· 🔇 muted"}{speaking(hostP) ? " · speaking" : ""}</div>
+              <Level p={hostP} />
+            </div>
           </div>
         ) : (
           <p className="muted">Waiting for the host to arrive.</p>
         )}
-        <div className="guests">
-          {[0, 1, 2].map((i) => {
-            const g = guests[i];
-            if (!g) return <div className="member" key={i}><span className="empty-slot">+</span><span className="nm">Open slot</span></div>;
-            return (
+        {(guests.length > 0 || host) && (
+          <div className="guests">
+            {guests.map((g) => (
               <div className={`member${speaking(g) ? " speaking" : ""}`} key={g.identity}>
-                <Avatar name={g.name || "Guest"} size={48} />
-                <span className="nm">{g === localParticipant ? "You" : g.name}</span>
+                <Avatar name={g.name || "Guest"} size={52} />
+                <span className="nm">{you(g) ? "You" : g.name}</span>
+                <span className="fine">{mic(g) ? "🎙 on" : "🔇 muted"}</span>
                 <Level p={g} />
-                {host && <button className="btn ghost sm" onClick={() => control("revoke", g.identity)}>Mute</button>}
+                {host && <button className="btn ghost sm" onClick={() => control("revoke", g.identity)}>Move to listeners</button>}
+              </div>
+            ))}
+            {host && guests.length === 0 && <p className="fine" style={{ gridColumn: "1 / -1" }}>Nobody else is speaking. Invite a listener who has raised a hand.</p>}
+          </div>
+        )}
+      </section>
+
+      <section className="stage" aria-label="Listeners">
+        <div className="eyebrow">Listeners · {listeners.length}</div>
+        {listeners.length === 0 && <p className="fine">No listeners yet.</p>}
+        <div className="lgrid">
+          {sortedListeners.map((p) => {
+            const hand = handSet.has(p.identity);
+            return (
+              <div className={`ltile${hand ? " hand" : ""}`} key={p.identity}>
+                <span className="lav"><Avatar name={p.name || "Guest"} size={44} />{hand && <span className="handbadge" aria-label="Hand raised">✋</span>}</span>
+                <span className="nm">{you(p) ? "You" : p.name}</span>
+                {host && hand && (
+                  <span className="row" style={{ gap: 4, justifyContent: "center" }}>
+                    <button className="btn soft sm" onClick={() => invite(p)}>Invite</button>
+                    <button className="btn ghost sm" onClick={() => decline(p)}>Not now</button>
+                  </span>
+                )}
               </div>
             );
           })}
         </div>
-        <div className="fine"><b>{participants.length}</b> in the room · {listenerCount} listening</div>
-      </div>
-
-      <div className="room-side">
-      <h2 className="sec-h display" style={{ margin: 0, fontSize: 17 }}>Raised hands<span className="count">{hands.length}</span></h2>
-      <div className="panel">
-        {hands.length === 0 && <p className="empty">No hands up right now.</p>}
-        {hands.map((h) => (
-          <div className="hand-row" key={h.identity}>
-            <Avatar name={h.name} size={36} />
-            <span className="hn">{h.name}</span>
-            {host && (<>
-              <button className="btn soft sm" onClick={() => invite(h)}>Invite</button>
-              <button className="btn ghost sm" onClick={() => { control("remove", h.identity); setHands((x) => x.filter((y) => y.identity !== h.identity)); }}>Remove</button>
-            </>)}
-          </div>
-        ))}
-      </div>
-
-      </div>
+      </section>
 
       <div className="dock">
-        <div className="eyebrow">Your voice</div>
-        <VoicePicker value={voice} onChange={setVoice} />
-        <div className="act-row">
-          {canSpeak ? (
-            <>
-              <div className="microw">
-                <button className={`btn big ${isMicrophoneEnabled ? "accent" : "soft"}`} onClick={toggleMic}>{isMicrophoneEnabled ? "🎙 Mic is ON · tap to mute" : "🔇 Mic is OFF · tap to turn on"}</button>
-                {isMicrophoneEnabled && <Level p={localParticipant} />}
-              </div>
-              {!host && <button className="btn ghost" onClick={stepDown}>Step down</button>}
-            </>
-          ) : (
-            <button className={`btn ${myHand ? "soft" : "accent"}`} onClick={toggleHand}>{myHand ? "Lower hand" : "Raise hand"}</button>
-          )}
-        </div>
-      </div>
+        {canSpeak ? (
+          <>
+            <div className="microw">
+              <button className={`btn big ${isMicrophoneEnabled ? "accent" : "soft"}`} onClick={toggleMic} disabled={micBusy}>{micBusy ? "Starting…" : isMicrophoneEnabled ? "🎙 Mic is ON · tap to mute" : "🔇 Mic is OFF · tap to turn on"}</button>
+              {isMicrophoneEnabled && <Level p={localParticipant} />}
+            </div>
+            {!host && <button className="btn ghost" onClick={stepDown}>Step down to listen</button>}
+          </>
+        ) : (
+          <button className={`btn big mutedbtn${myHand ? " up" : ""}`} onClick={toggleHand} aria-pressed={myHand}>
+            {myHand ? <>✋ Hand raised<small>Waiting for the host. Tap to lower your hand.</small></> : <>🔇 You&rsquo;re muted<small>Tap to ask the host to let you speak</small></>}
+          </button>
+        )}
+        <details className="voicebox">
+          <summary>Change how my voice sounds</summary>
+          <VoicePicker value={voice} onChange={setVoice} />
+          <p className="fine">{VOICES[voice].hint}. Others only ever hear the changed voice. Use headphones to avoid echo.</p>
+        </details>
       </div>
     </div>
   );

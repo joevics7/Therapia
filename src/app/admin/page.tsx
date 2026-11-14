@@ -12,7 +12,7 @@ import { Therapists } from "./Therapists";
 import JoinRequests from "@/components/JoinRequests";
 
 type Room = { id: string; title: string; cat: string; host_name: string; host_id: string | null; women_only: boolean; men_only: boolean; pal: string; schedule_text: string | null; days: number[]; start_time: string | null; active: boolean };
-type Fac = { user_id: string; username: string; display_name: string | null };
+type Fac = { user_id: string; username: string; display_name: string | null; email?: string | null };
 type Sess = { id: string; room_id: string; starts_at: string; note: string | null };
 type Code = { room_id: string; expires_at: string | null };
 type Overview = { rooms: Room[]; facilitators: Fac[]; codes: Code[]; sessions: Sess[]; counts: Record<string, { members: number; banned: number }> };
@@ -305,13 +305,14 @@ function Facilitators({ data, call, say, onChanged }: { data: Overview; call: Ca
   const [name, setName] = useState("");
   const [user, setUser] = useState("");
   const [pw, setPw] = useState("");
+  const [mail, setMail] = useState("");
   const [busy, setBusy] = useState(false);
   async function add(e: React.FormEvent) {
     e.preventDefault(); setBusy(true);
-    const r = await call("facilitator.create", { display_name: name, username: user, password: pw });
+    const r = await call("facilitator.create", { display_name: name, username: user, email: mail, password: pw });
     setBusy(false);
     if (!r.ok) { say(String(r.data.error ?? "Couldn't add.")); return; }
-    setName(""); setUser(""); setPw(""); say("Facilitator added."); onChanged();
+    setName(""); setUser(""); setPw(""); setMail(""); say("Facilitator added."); onChanged();
   }
   return (
     <section className="stack">
@@ -319,10 +320,11 @@ function Facilitators({ data, call, say, onChanged }: { data: Overview; call: Ca
       <form className="card stack" onSubmit={add}>
         <span className="eyebrow">Add a facilitator</span>
         <input className="field" value={name} maxLength={40} onChange={(e) => setName(e.target.value)} placeholder="Display name, e.g. Dr Halima" aria-label="Display name" />
-        <input className="field" value={user} maxLength={20} onChange={(e) => setUser(e.target.value)} placeholder="Sign-in username, e.g. dr_halima" autoCapitalize="none" autoComplete="off" aria-label="Sign-in username" />
+        <input className="field" type="email" value={mail} maxLength={120} onChange={(e) => setMail(e.target.value)} placeholder="Email address, e.g. halima@example.com" autoCapitalize="none" autoComplete="off" aria-label="Email address" />
+        <input className="field" value={user} maxLength={20} onChange={(e) => setUser(e.target.value)} placeholder="Short name for the system, e.g. dr_halima" autoCapitalize="none" autoComplete="off" aria-label="Sign-in username" />
         <input className="field" type="text" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="Starting password (8+ characters)" autoComplete="off" aria-label="Starting password" />
-        <button className="btn primary" disabled={busy || name.trim().length < 2 || user.trim().length < 3 || pw.length < 8}>{busy ? "Adding…" : "Add facilitator"}</button>
-        <p className="fine">They sign in at /host/login with the username and password. Then assign them to a group from the Groups tab.</p>
+        <button className="btn primary" disabled={busy || name.trim().length < 2 || user.trim().length < 3 || pw.length < 8 || !mail.includes("@")}>{busy ? "Adding…" : "Add facilitator"}</button>
+        <p className="fine">They sign in at /host/login with their email and this password. Then assign them to a group from the Groups tab.</p>
       </form>
       {data.facilitators.map((f) => <FacRow key={f.user_id} fac={f} rooms={data.rooms.filter((r) => r.host_id === f.user_id)} call={call} say={say} onChanged={onChanged} />)}
     </section>
@@ -332,8 +334,9 @@ function Facilitators({ data, call, say, onChanged }: { data: Overview; call: Ca
 function FacRow({ fac, rooms, call, say, onChanged }: { fac: Fac; rooms: Room[]; call: Call; say: (m: string) => void; onChanged: () => Promise<void> }) {
   const [name, setName] = useState(fac.display_name ?? "");
   const [pw, setPw] = useState("");
+  const [mail, setMail] = useState(fac.email ?? "");
   async function save() {
-    const r = await call("facilitator.update", { user_id: fac.user_id, display_name: name, ...(pw ? { password: pw } : {}) });
+    const r = await call("facilitator.update", { user_id: fac.user_id, display_name: name, ...(pw ? { password: pw } : {}), ...(mail && mail !== (fac.email ?? "") ? { email: mail } : {}) });
     if (!r.ok) { say(String(r.data.error ?? "Couldn't save.")); return; }
     setPw(""); say("Saved."); onChanged();
   }
@@ -349,6 +352,7 @@ function FacRow({ fac, rooms, call, say, onChanged }: { fac: Fac; rooms: Room[];
       <div className="fine">{rooms.length ? `Hosts: ${rooms.map((r) => r.title).join(", ")}` : "Not assigned to any group yet"}</div>
       <div className="row" style={{ flexWrap: "wrap", gap: 8 }}>
         <input className="field" style={{ flex: "1 1 160px" }} value={name} maxLength={40} onChange={(e) => setName(e.target.value)} aria-label="Display name" />
+        <input className="field" type="email" style={{ flex: "1 1 220px" }} value={mail} onChange={(e) => setMail(e.target.value)} placeholder="Email (needed to sign in)" autoCapitalize="none" aria-label="Email" />
         <input className="field" style={{ flex: "1 1 160px" }} value={pw} onChange={(e) => setPw(e.target.value)} placeholder="New password (optional)" autoComplete="off" aria-label="New password" />
         <button className="btn primary" disabled={name.trim().length < 2 || (pw.length > 0 && pw.length < 8)} onClick={save}>Save</button>
         <button className="btn ghost" onClick={del}>Delete</button>

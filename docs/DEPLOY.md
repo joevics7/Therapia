@@ -104,3 +104,10 @@ Therapists, their available times and bookings live in the database and are mana
 - Open groups: the person joins straight away. Closed groups (password or women-only): they send a join request, and the host or admin approves or declines it. Requests appear under the group in Host tools and in the group's Members card in /admin.
 - Hosts and admins see who invited each person (in the request, and in the Members list). The invited person is told they were invited by a member. Other members never see it.
 - Switching a link off, banning the inviter, or deactivating the group stops it working.
+
+## Live meeting layout
+
+- The meeting is laid out like an audio space: **Speakers** on top (host first, with mic on/off and a voice bar), **Listeners** below (everyone in the room, by their username, with ✋ for raised hands), and one big button at the bottom. Listeners see "🔇 You're muted · tap to ask the host to let you speak". The host sees raised hands first in the Listeners list with **Invite** and **Not now**.
+- Members join the live audio automatically when the meeting is on and they are on the Meeting tab. Facilitators press **Start the meeting**. "Open slot" boxes are no longer shown to listeners.
+- Voice effects now run through the app's own audio pipeline before the mic is published.
+- **Facilitators need an email.** Add it in /admin → Facilitators; they sign in at /host/login with that email. Existing facilitators can have an email added there too. Changing a member-turned-facilitator's email means they must use /host/login from then on.
