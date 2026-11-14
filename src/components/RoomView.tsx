@@ -1,6 +1,6 @@
 "use client";
 
-import { useLocalParticipant, useParticipants, useRoomContext } from "@livekit/components-react";
+import { StartAudio, useLocalParticipant, useParticipants, useRoomContext } from "@livekit/components-react";
 import { type Participant, RoomEvent } from "livekit-client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Track, createLocalAudioTrack, type LocalAudioTrack } from "livekit-client";
@@ -21,6 +21,16 @@ const roleOf = (p: Participant) => {
 const Avatar = ({ name, size }: { name: string; size: number }) => (
   <span className="av" style={{ "--s": `${size}px`, background: avatarVar(name) } as React.CSSProperties} aria-hidden="true">{initials(name)}</span>
 );
+
+/** A small live bar that moves with the person's voice, so you can see the microphone is working. */
+function Level({ p }: { p?: Participant }) {
+  const [v, setV] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setV(p?.audioLevel ?? 0), 120);
+    return () => clearInterval(t);
+  }, [p]);
+  return <div className="level" aria-hidden="true"><i style={{ width: `${Math.min(100, Math.round(v * 160))}%` }} /></div>;
+}
 
 type Props = { room: RoomDef; host: boolean; token: string; onLeave: () => void };
 
@@ -148,6 +158,7 @@ export default function RoomView({ room, host, token, onLeave }: Props) {
   return (
     <div className="room meet">
       {toast && <div className="toast" role="status" aria-live="polite">{toast}</div>}
+      <StartAudio label="Tap to turn on sound" className="btn accent big" />
       <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
         <span className="livepill"><i />{hostP ? "Live now" : "Host is joining…"}</span>
         <button className="btn ghost sm" onClick={() => { lk.disconnect(); onLeave(); }}>Leave the meeting</button>
@@ -167,7 +178,7 @@ export default function RoomView({ room, host, token, onLeave }: Props) {
         {hostP ? (
           <div className={`member host${speaking(hostP) ? " speaking" : ""}`}>
             <Avatar name={hostP.name || "Host"} size={64} />
-            <div><span className="nm">{hostP.name}</span><div className="fine">Host · facilitator</div></div>
+            <div style={{ flex: 1, minWidth: 0 }}><span className="nm">{hostP === localParticipant ? "You" : hostP.name}</span><div className="fine">Host · facilitator{speaking(hostP) ? " · speaking" : ""}</div><Level p={hostP} /></div>
           </div>
         ) : (
           <p className="muted">Waiting for the host to arrive.</p>
@@ -180,6 +191,7 @@ export default function RoomView({ room, host, token, onLeave }: Props) {
               <div className={`member${speaking(g) ? " speaking" : ""}`} key={g.identity}>
                 <Avatar name={g.name || "Guest"} size={48} />
                 <span className="nm">{g === localParticipant ? "You" : g.name}</span>
+                <Level p={g} />
                 {host && <button className="btn ghost sm" onClick={() => control("revoke", g.identity)}>Mute</button>}
               </div>
             );
@@ -212,7 +224,10 @@ export default function RoomView({ room, host, token, onLeave }: Props) {
         <div className="act-row">
           {canSpeak ? (
             <>
-              <button className={`btn ${isMicrophoneEnabled ? "accent" : "soft"}`} onClick={toggleMic}>{isMicrophoneEnabled ? "Mic on" : "Muted"}</button>
+              <div className="microw">
+                <button className={`btn big ${isMicrophoneEnabled ? "accent" : "soft"}`} onClick={toggleMic}>{isMicrophoneEnabled ? "🎙 Mic is ON · tap to mute" : "🔇 Mic is OFF · tap to turn on"}</button>
+                {isMicrophoneEnabled && <Level p={localParticipant} />}
+              </div>
               {!host && <button className="btn ghost" onClick={stepDown}>Step down</button>}
             </>
           ) : (

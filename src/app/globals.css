@@ -450,3 +450,6 @@ button, input { font: inherit; color: inherit; }
 @keyframes pulse { 50% { opacity: .3; } }
 .carecard { border-color: var(--indigo); display: grid; gap: 8px; }
 .meetcard { display: grid; gap: 12px; }
+.level { height: 6px; width: 100%; min-width: 48px; border-radius: 999px; background: var(--surface2); overflow: hidden; margin-top: 4px; }
+.level i { display: block; height: 100%; background: var(--green); transition: width .12s linear; }
+.microw { display: grid; gap: 6px; flex: 1; }
