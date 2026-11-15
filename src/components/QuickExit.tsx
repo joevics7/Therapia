@@ -43,6 +43,7 @@ export function QuickExitProvider({ children }: { children: React.ReactNode }) {
           <h1 className="cv-title" onClick={tap}>Notes</h1>
           <p className="cv-sub">Shopping list</p>
           <ul className="cv-list"><li>Rice, 5 kg</li><li>Tomatoes and pepper</li><li>Onions</li><li>Palm oil</li><li>Garri</li><li>Bread</li></ul>
+          <button className="cv-done" onClick={() => setCovered(false)}>Done</button>
         </div>
       )}
     </C.Provider>

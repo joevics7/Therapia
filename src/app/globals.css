@@ -466,3 +466,4 @@ button, input { font: inherit; color: inherit; }
 .meetbar { position: fixed; top: 0; left: 0; right: 0; z-index: 55; display: flex; align-items: center; gap: 8px; padding: calc(env(safe-area-inset-top, 0px) + 8px) 12px 8px; background: var(--surface); border-bottom: 1px solid var(--line); box-shadow: 0 6px 20px -16px rgba(20,10,70,.5); }
 .meetbar-t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; color: var(--ink); text-decoration: none; }
 body.has-meetbar { padding-top: calc(env(safe-area-inset-top, 0px) + 56px); }
+.cv-done { margin-top: 28px; padding: 10px 22px; border-radius: 999px; border: 1px solid #c9c4b8; background: transparent; color: #8a857a; font: inherit; font-size: 15px; cursor: pointer; }
