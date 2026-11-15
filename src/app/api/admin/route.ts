@@ -296,6 +296,27 @@ export async function POST(req: Request) {
         return J({ ok: true });
       }
 
+      // ---------- blog inbox (saved pasted text, processed hourly by /api/cron/blog-inbox) ----------
+      case "inbox.list": {
+        const r = await db.from("blog_inbox").select("id, content, status, error, attempts, article_slug, created_at").order("created_at", { ascending: true }).limit(200);
+        if (r.error) return bad("Couldn't load saved content.", 500);
+        return J({ items: r.data ?? [] });
+      }
+      case "inbox.add": {
+        const content = typeof b.content === "string" ? b.content.slice(0, 120_000) : "";
+        if (!content.trim()) return bad("Paste some content first.");
+        const r = await db.from("blog_inbox").insert({ content }).select("id").single();
+        if (r.error) return bad("Couldn't save it.", 500);
+        return J({ ok: true, id: r.data.id });
+      }
+      case "inbox.delete": {
+        const id = str(b.id, 60);
+        if (!/^[0-9a-f-]{36}$/i.test(id)) return bad("Bad request.");
+        const r = await db.from("blog_inbox").delete().eq("id", id);
+        if (r.error) return bad("Couldn't delete.", 500);
+        return J({ ok: true });
+      }
+
       // ---------- therapists ----------
       case "therapists.list": {
         const [t, s] = await Promise.all([

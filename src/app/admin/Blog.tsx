@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 
 type Call = (action: string, body?: object) => Promise<{ ok: boolean; data: Record<string, unknown> }>;
 type Say = (m: string) => void;
+type Item = { id: string; content: string; status: "not_processed" | "processed"; error: string | null; attempts: number; article_slug: string | null; created_at: string };
 type Row = { slug: string; category_slug: string; published: boolean; published_at: string | null; article_translations: { title: string; locale: string }[] };
 
 // Same fields and the same AI auto-fill behaviour as the Toolbase admin's article form.
@@ -92,6 +93,26 @@ function ArticleForm({ start, lock, call, say, onClose }: { start: Values; lock:
   const [err, setErr] = useState("");
   const set = <K extends keyof Values>(k: K, x: Values[K]) => setV((p) => ({ ...p, [k]: x }));
   const list = (s: string) => s.split(",").map((x) => x.trim()).filter(Boolean);
+  const [saved, setSaved] = useState<Item[] | null>(null);
+  const [draft, setDraft] = useState("");
+  const loadSaved = useCallback(async () => {
+    const r = await call("inbox.list");
+    setSaved((r.data.items as Item[]) ?? []);
+  }, [call]);
+  useEffect(() => { if (!lock) loadSaved(); }, [lock, loadSaved]);
+  async function keep() {
+    if (!draft.trim()) { setErr("Paste some content to save first."); return; }
+    setErr("");
+    const r = await call("inbox.add", { content: draft });
+    if (!r.ok) { setErr(String(r.data.error ?? "Couldn't save.")); return; }
+    setDraft(""); say("Saved for the hourly parser."); loadSaved();
+  }
+  async function removeSaved(id: string) {
+    if (!window.confirm("Delete this saved content?")) return;
+    const r = await call("inbox.delete", { id });
+    say(r.ok ? "Deleted." : String(r.data.error ?? "Couldn't delete."));
+    loadSaved();
+  }
 
   async function aiFill() {
     setErr("");
@@ -141,6 +162,30 @@ function ArticleForm({ start, lock, call, say, onClose }: { start: Values; lock:
         <label className="stack"><span className="eyebrow">Title *</span><input className="field" required value={v.title} onChange={(e) => set("title", e.target.value)} /></label>
         <label className="stack"><span className="eyebrow">Content (markdown) *</span><textarea className="field" style={{ minHeight: 300, fontFamily: "monospace" }} required value={v.content} onChange={(e) => set("content", e.target.value)} placeholder={"## Heading\n\nBody..."} /></label>
       </div>
+
+      {!lock && (
+        <div className="card stack" style={{ borderStyle: "dashed" }}>
+          <b>Save content for later</b>
+          <p className="muted">Paste raw content here and save it. An hourly job parses the oldest unprocessed one and saves it as a draft. Or press Paste on a saved one to move it into the Content box above.</p>
+          <textarea className="field" rows={5} value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Paste raw content to queue…" />
+          <button type="button" className="btn soft" onClick={keep}>Save for later</button>
+          {saved && saved.length === 0 && <p className="fine">Nothing saved yet.</p>}
+          {saved?.map((it) => (
+            <div className="row adm-line" key={it.id} style={{ flexWrap: "wrap", gap: 8 }}>
+              <span style={{ flex: "1 1 220px", minWidth: 0 }}>
+                <span className="badge">{it.status === "processed" ? "Processed" : "Not processed"}</span>{" "}
+                <span className="fine">{new Date(it.created_at).toLocaleString()}{it.article_slug ? ` · /blog/${it.article_slug}` : ""}</span>
+                <br /><span className="muted">{it.content.replace(/\s+/g, " ").slice(0, 140)}{it.content.length > 140 ? "…" : ""}</span>
+                {it.error && it.status !== "processed" && <><br /><span className="err">Last error: {it.error}{it.attempts >= 3 ? " (gave up after 3 tries)" : ""}</span></>}
+              </span>
+              <span className="row" style={{ gap: 6 }}>
+                <button type="button" className="btn soft sm" onClick={() => { set("content", it.content); say("Pasted into the Content box."); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Paste</button>
+                <button type="button" className="btn ghost sm" onClick={() => removeSaved(it.id)}>Delete</button>
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="card stack" style={{ borderStyle: "dashed" }}>
         <b>AI auto-fill</b>
