@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { PageHead, useToast } from "@/components/ui";
+import AudioTool from "@/components/AudioTool";
+import BetTool from "@/components/BetTool";
 import { useQuickExit } from "@/components/QuickExit";
 import { GROUND, PROMPTS, TOOLS } from "@/lib/data";
 import { useStored } from "@/lib/store";
@@ -39,7 +41,7 @@ export default function Tools() {
             </button>
           ))}
         </div>
-        <p className="fine">Your journal stays on this device.</p>
+        <p className="fine">Your journal and betting plan stay on this device.</p>
       </>
     );
   }
@@ -49,6 +51,9 @@ export default function Tools() {
       {tool === "breathe" && <Breathe />}
       {tool === "ground" && <Ground onDone={() => open(null)} />}
       {tool === "journal" && <Journal />}
+      {tool === "meditate" && <AudioTool kind="meditation" />}
+      {tool === "sleep" && <AudioTool kind="sleep" />}
+      {tool === "betting" && <BetTool />}
       {tool === "safety" && <Safety />}
     </div>
   );

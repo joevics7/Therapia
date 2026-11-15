@@ -15,6 +15,9 @@ export const TOOLS = [
   { id: "breathe", name: "Breathe", sub: "One minute, box breathing", icon: "≋" },
   { id: "ground", name: "Ground yourself", sub: "The 5-4-3-2-1 steps", icon: "✦" },
   { id: "journal", name: "Journal", sub: "A private place to write", icon: "✎" },
+  { id: "meditate", name: "Meditate", sub: "Guided audio to reset", icon: "☾" },
+  { id: "sleep", name: "Sleep", sub: "Audio to wind down", icon: "☁" },
+  { id: "betting", name: "Betting plan", sub: "Cut down step by step", icon: "◐" },
   { id: "safety", name: "Quick exit", sub: "Hide this screen fast", icon: "⏻" },
 ] as const;
 

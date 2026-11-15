@@ -317,6 +317,65 @@ export async function POST(req: Request) {
         return J({ ok: true });
       }
 
+      // ---------- morning motivation ----------
+      case "motivations.list": {
+        const r = await db.from("motivations").select("id, body, active, created_at").order("created_at", { ascending: false }).limit(500);
+        if (r.error) return bad("Couldn't load messages.", 500);
+        return J({ items: r.data ?? [] });
+      }
+      case "motivation.save": {
+        const body = str(b.body, 400), id = str(b.id, 60);
+        if (!body) return bad("Write the message.");
+        if (id && !/^[0-9a-f-]{36}$/i.test(id)) return bad("Bad request.");
+        const row = { body, active: b.active !== false };
+        const r = id ? await db.from("motivations").update(row).eq("id", id) : await db.from("motivations").insert(row);
+        if (r.error) return bad("Couldn't save.", 500);
+        return J({ ok: true });
+      }
+      case "motivation.delete": {
+        const id = str(b.id, 60);
+        if (!/^[0-9a-f-]{36}$/i.test(id)) return bad("Bad request.");
+        const r = await db.from("motivations").delete().eq("id", id);
+        if (r.error) return bad("Couldn't delete.", 500);
+        return J({ ok: true });
+      }
+
+      // ---------- meditation and sleep audio (files go straight from the browser to storage) ----------
+      case "audios.list": {
+        const r = await db.from("audios").select("*").order("kind").order("sort").order("created_at", { ascending: false });
+        if (r.error) return bad("Couldn't load audios.", 500);
+        return J({ items: r.data ?? [] });
+      }
+      case "audio.upload_url": {
+        const kind = str(b.kind, 20), ext = str(b.ext, 5).toLowerCase();
+        if (!["meditation", "sleep"].includes(kind)) return bad("Bad request.");
+        if (!["mp3", "m4a", "aac", "ogg", "wav", "webm", "mp4"].includes(ext)) return bad("Use an mp3, m4a, aac, ogg, wav or webm file.");
+        const path = `${kind}/${crypto.randomUUID()}.${ext}`;
+        const u = await db.storage.from("audio").createSignedUploadUrl(path);
+        if (u.error || !u.data) return bad("Couldn't prepare the upload.", 500);
+        return J({ path, token: u.data.token });
+      }
+      case "audio.save": {
+        const id = str(b.id, 60), kind = str(b.kind, 20), title = str(b.title, 120), path = str(b.path, 200);
+        if (!["meditation", "sleep"].includes(kind)) return bad("Bad request.");
+        if (!title) return bad("Enter a title.");
+        if (id && !/^[0-9a-f-]{36}$/i.test(id)) return bad("Bad request.");
+        if (!/^(meditation|sleep)\/[0-9a-f-]{36}\.[a-z0-9]{2,4}$/.test(path)) return bad("Upload the audio first.");
+        const row = { kind, title, description: str(b.description, 400), path, duration_secs: Math.min(86400, Math.max(0, Math.round(Number(b.duration_secs) || 0))), active: b.active !== false, sort: Math.round(Number(b.sort) || 0) };
+        const r = id ? await db.from("audios").update(row).eq("id", id) : await db.from("audios").insert(row);
+        if (r.error) return bad("Couldn't save.", 500);
+        return J({ ok: true });
+      }
+      case "audio.delete": {
+        const id = str(b.id, 60);
+        if (!/^[0-9a-f-]{36}$/i.test(id)) return bad("Bad request.");
+        const a = await db.from("audios").select("path").eq("id", id).maybeSingle();
+        const d = await db.from("audios").delete().eq("id", id);
+        if (d.error) return bad("Couldn't delete.", 500);
+        if (a.data?.path) await db.storage.from("audio").remove([a.data.path]);
+        return J({ ok: true });
+      }
+
       // ---------- therapists ----------
       case "therapists.list": {
         const [t, s] = await Promise.all([

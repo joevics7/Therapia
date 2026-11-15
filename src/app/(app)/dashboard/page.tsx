@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { HelpSheet } from "@/components/ui";
+import Morning from "@/components/Morning";
 import { AFFIRM, MOODS, MOOD_MSG, TOOLS } from "@/lib/data";
 import { useRooms } from "@/lib/hooks";
 import { hostLabel } from "@/lib/rooms";
@@ -117,6 +118,8 @@ export default function Dashboard() {
           ))}
         </div>
       </section>
+
+      <Morning />
 
       <section className="affirm">
         <div className="strip ankara pal-b" aria-hidden="true" />
