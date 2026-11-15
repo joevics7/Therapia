@@ -127,11 +127,12 @@ The live connection lives in `MeetingProvider` (root layout), not on the room pa
 
 ### Blog automation (cron-job.org)
 
-1. Add `CRON_SECRET` (16+ random characters) on Vercel and redeploy.
-2. Daily, publish drafts (all drafts, oldest first; add `&limit=N` to publish at most N per call):
-   `https://therapia-three.vercel.app/api/cron/blog-publish?key=<CRON_SECRET>`
-3. Hourly, parse the oldest saved text into a draft:
-   `https://therapia-three.vercel.app/api/cron/blog-inbox?key=<CRON_SECRET>`
-4. Save text in **/admin → Blog → New article → Save content for later**. Table: `blog_inbox` (`not_processed` / `processed`). A saved item is tried 3 times, then skipped; its last error shows in the list.
+No secret is needed; the URLs limit themselves (calls that come too early do nothing and return 429).
+
+1. Daily, publish drafts (all drafts, oldest first; add `?limit=N` to publish at most N). Runs at most once per 20 hours:
+   `https://therapia-three.vercel.app/api/cron/blog-publish`
+2. Hourly, parse the oldest saved text into a draft. Runs at most once per 50 minutes:
+   `https://therapia-three.vercel.app/api/cron/blog-inbox`
+3. Save text in **/admin → Blog → New article → Save content for later**. Table: `blog_inbox` (`not_processed` / `processed`). A saved item is tried 3 times, then skipped; its last error shows in the list.
 - The queue never overwrites an existing article (a taken slug becomes `slug-2`).
-- Auto-published AI content is not human-reviewed. Check drafts before the daily publish if you want to review them.
+- Auto-published AI content is not human-reviewed.

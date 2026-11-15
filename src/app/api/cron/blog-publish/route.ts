@@ -1,17 +1,16 @@
 import { NextResponse } from "next/server";
 import { adminClient } from "@/lib/admin";
-import { cronAllowed } from "@/lib/cron.server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /** Daily: publish drafts, oldest first. All of them by default; add &limit=N to publish at most N per call. */
 async function run(req: Request) {
-  const a = cronAllowed(req);
-  if (a === "off") return NextResponse.json({ error: "CRON_SECRET is not set (16+ characters)." }, { status: 503 });
-  if (a === "denied") return NextResponse.json({ error: "Not allowed." }, { status: 401 });
   const db = adminClient();
   if (!db) return NextResponse.json({ error: "Server not configured." }, { status: 503 });
+  // Open URL, so we limit it ourselves: too-early calls do nothing.
+  const ok = await db.rpc("rate_allow", { p_key: "blog:publish", p_max: 1, p_window_secs: 72000 });
+  if (ok.data === false) return NextResponse.json({ status: "limited", message: "Already published within the last 20 hours." }, { status: 429 });
   const lim = parseInt(new URL(req.url).searchParams.get("limit") ?? "", 10);
   const limit = Number.isFinite(lim) && lim > 0 ? Math.min(lim, 100) : 100;
   const drafts = await db.from("articles").select("slug").eq("published", false).order("created_at", { ascending: true }).limit(limit);
