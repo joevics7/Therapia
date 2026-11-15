@@ -115,3 +115,12 @@ Therapists, their available times and bookings live in the database and are mana
 ## The meeting keeps going while you use the app
 
 The live connection lives in `MeetingProvider` (root layout), not on the room page. Members and facilitators can move around the app, read, chat or vent while listening or speaking. A bar at the top shows "Live · group name" with a mute/raise-hand button, a way back to the room, and Leave. Signing out or Quick exit ends the meeting. Refreshing or closing the page still disconnects, and phones may pause audio when the screen is locked or the browser is in the background.
+
+## Blog
+
+- Tables: `articles` and `article_translations` (same design as Toolbase). Public can read published rows only; writes go through `/api/admin` (service role).
+- Write posts in **/admin → Blog**. "Auto-fill" and "Rewrite" use the Toolbase Gemini extraction prompt (`src/lib/blog-ai.server.ts`).
+- Env: `GEMINI_API_KEY` (optional `GEMINI_API_KEY_2…` for rotation), `NEXT_PUBLIC_SITE_URL` (canonical/sitemap).
+- Posts stay drafts until you tick Published.
+- AI rewrites of mental-health articles must be reviewed by a human before publishing.
+- Public pages: `/blog`, `/blog/<slug>`, `/sitemap.xml`, `/robots.txt`. English only for now; `article_translations.locale` is ready for more.

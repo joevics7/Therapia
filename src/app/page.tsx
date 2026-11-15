@@ -110,7 +110,7 @@ export default function Landing() {
 
       <footer className="lp-foot">
         <span className="muted">Therapia is peer support and therapy booking. If you are in danger now, call 112.</span>
-        <span><Link href="/host/login">Facilitator sign-in</Link> · <Link href="/forgot">Forgot password?</Link></span>
+        <span><Link href="/blog">Blog</Link> · <Link href="/host/login">Facilitator sign-in</Link> · <Link href="/forgot">Forgot password?</Link></span>
       </footer>
     </div>
   );

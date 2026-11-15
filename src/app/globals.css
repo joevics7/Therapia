@@ -467,3 +467,19 @@ button, input { font: inherit; color: inherit; }
 .meetbar-t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; color: var(--ink); text-decoration: none; }
 body.has-meetbar { padding-top: calc(env(safe-area-inset-top, 0px) + 56px); }
 .cv-done { margin-top: 28px; padding: 10px 22px; border-radius: 999px; border: 1px solid #c9c4b8; background: transparent; color: #8a857a; font: inherit; font-size: 15px; cursor: pointer; }
+
+/* ---- blog ---- */
+.blog .blogcard h2 a { color: var(--ink); text-decoration: none; }
+.blog .blogcard h2 a:hover { text-decoration: underline; }
+.blog-disc { margin-top: 12px; }
+.blogcta { display: grid; gap: 8px; justify-items: start; margin-top: 18px; }
+.prose { font-size: 17px; line-height: 1.7; overflow-wrap: anywhere; }
+.prose h2 { font-family: var(--display, inherit); font-size: 24px; margin: 28px 0 8px; }
+.prose h3 { font-size: 19px; margin: 22px 0 6px; }
+.prose p, .prose ul, .prose ol, .prose blockquote, .prose table { margin: 0 0 14px; }
+.prose ul, .prose ol { padding-left: 22px; }
+.prose a { color: var(--indigo); text-decoration: underline; }
+.prose blockquote { border-left: 4px solid var(--sun); padding: 2px 14px; color: var(--muted); }
+.prose img { max-width: 100%; height: auto; border-radius: 12px; }
+.prose table { display: block; overflow-x: auto; border-collapse: collapse; }
+.prose th, .prose td { border: 1px solid var(--line); padding: 6px 10px; text-align: left; }

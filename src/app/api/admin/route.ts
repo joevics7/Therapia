@@ -2,12 +2,15 @@ import { RoomServiceClient } from "livekit-server-sdk";
 import { NextResponse } from "next/server";
 import { adminClient } from "@/lib/admin";
 import { passwordProblem, usernameProblem } from "@/lib/identity";
+import { runExtraction } from "@/lib/blog-ai.server";
 import { bearer, livekitEnv, ROOM_ID } from "@/lib/server";
 import { userClient } from "@/lib/supabase";
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const BLOG_SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60; // AI writing and tidy-ups can take a while
 
 const J = (body: object, status = 200) => NextResponse.json(body, { status });
 const bad = (message: string, status = 400) => J({ error: message }, status);
@@ -224,6 +227,72 @@ export async function POST(req: Request) {
           const lk = livekitEnv();
           if (lk) { try { await new RoomServiceClient(lk.httpUrl, lk.key, lk.secret).removeParticipant(id, alias); } catch { /* not in the audio room */ } }
         }
+        return J({ ok: true });
+      }
+
+      // ---------- blog (same shape as the Toolbase admin: articles + article_translations, AI tidy-up) ----------
+      case "articles.list": {
+        const r = await db.from("articles").select("slug, category_slug, published, published_at, article_translations(title, locale)").order("published_at", { ascending: false, nullsFirst: false });
+        if (r.error) return bad("Couldn't load articles.", 500);
+        return J({ articles: r.data ?? [] });
+      }
+      case "article.get": {
+        const s = str(b.slug, 120), locale = str(b.locale, 10) || "en";
+        if (!BLOG_SLUG.test(s)) return bad("Bad request.");
+        const a = await db.from("articles").select("*").eq("slug", s).maybeSingle();
+        if (!a.data) return bad("Article not found.", 404);
+        const t = await db.from("article_translations").select("*").eq("article_slug", s).eq("locale", locale).maybeSingle();
+        return J({ article: a.data, translation: t.data });
+      }
+      case "article.extract": {
+        const content = typeof b.content === "string" ? b.content.slice(0, 120_000) : "";
+        if (!content.trim()) return bad("Paste content first.");
+        try { return J({ result: await runExtraction(str(b.title, 300), content) }); }
+        catch (e) { return bad(e instanceof Error ? e.message.slice(0, 400) : "The AI could not finish. Try again.", 502); }
+      }
+      case "article.save": {
+        const s = str(b.slug, 120), locale = str(b.locale, 10) || "en";
+        const list = (v: unknown, max = 12) => (Array.isArray(v) ? v : []).map((x) => str(x, 80)).filter(Boolean).slice(0, max);
+        const title = str(b.title, 300), content = typeof b.content === "string" ? b.content.slice(0, 200_000) : "";
+        if (!BLOG_SLUG.test(s)) return bad("The slug can use lowercase letters, numbers and hyphens only.");
+        if (!str(b.category_slug, 80)) return bad("Enter a category.");
+        if (!title) return bad("Enter a title.");
+        if (!content.trim()) return bad("The article has no content.");
+        if (!/^[a-z]{2,3}(-[A-Za-z]{2,4})?$/.test(locale)) return bad("Bad locale.");
+        const published = b.published === true;
+        const prev = await db.from("articles").select("published, published_at").eq("slug", s).maybeSingle();
+        const art = await db.from("articles").upsert({
+          slug: s, category_slug: str(b.category_slug, 80), related_tool_slugs: list(b.related_tool_slugs), countries: list(b.countries),
+          published, published_at: published ? (prev.data?.published_at ?? new Date().toISOString()) : null,
+        }, { onConflict: "slug" });
+        if (art.error) return bad("Couldn't save the article.", 500);
+        const og = str(b.og_image_url, 500);
+        const tr = await db.from("article_translations").upsert({
+          article_slug: s, locale, title, excerpt: str(b.excerpt, 500), content, meta_description: str(b.meta_description, 300),
+          og_image_url: /^https:\/\//.test(og) ? og : null, reading_time_minutes: Math.min(120, Math.max(1, Math.round(Number(b.reading_time_minutes) || 5))), is_translated: true,
+        }, { onConflict: "article_slug,locale" });
+        if (tr.error) return bad("Couldn't save the article text.", 500);
+        return J({ ok: true, slug: s });
+      }
+      case "article.rewrite": {
+        const s = str(b.slug, 120), locale = str(b.locale, 10) || "en";
+        if (!BLOG_SLUG.test(s)) return bad("Bad request.");
+        const t = await db.from("article_translations").select("title, content").eq("article_slug", s).eq("locale", locale).maybeSingle();
+        if (!t.data) return bad("Translation not found for this article.", 404);
+        let out;
+        try { out = await runExtraction(t.data.title ?? "", t.data.content ?? ""); }
+        catch (e) { return bad(e instanceof Error ? e.message.slice(0, 400) : "The AI could not finish. Try again.", 502); }
+        const u = await db.from("article_translations").update({
+          content: out.cleaned_content, excerpt: out.excerpt, meta_description: out.meta_description, reading_time_minutes: out.reading_time_minutes,
+        }).eq("article_slug", s).eq("locale", locale);
+        if (u.error) return bad("Couldn't save the rewrite.", 500);
+        return J({ ok: true, slug: s });
+      }
+      case "article.delete": {
+        const s = str(b.slug, 120);
+        if (!BLOG_SLUG.test(s)) return bad("Bad request.");
+        const d = await db.from("articles").delete().eq("slug", s); // translations go with it
+        if (d.error) return bad("Couldn't delete.", 500);
         return J({ ok: true });
       }
 
