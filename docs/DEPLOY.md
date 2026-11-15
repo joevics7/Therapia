@@ -139,6 +139,6 @@ No secret is needed; the URLs limit themselves (calls that come too early do not
 
 ## Morning message, audio and betting plan
 
-- **Morning message:** write messages in /admin → Morning. One shows per day on the dashboard (cycles through the active ones, Lagos date). People can turn on a browser notification at 5–10 am (needs the VAPID keys already used for reminders). The database job `send-morning` runs every 15 minutes and calls `/api/morning/dispatch` only when someone is due. With no active messages nothing is shown or sent.
+- **Morning message:** write messages in /admin → Morning. One shows per day in Tools → Morning message (cycles through the active ones, Lagos date). People can turn on a browser notification (in Tools → Morning message) at 5–10 am (needs the VAPID keys already used for reminders). The database job `send-morning` runs every 15 minutes and calls `/api/morning/dispatch` only when someone is due. With no active messages nothing is shown or sent.
 - **Meditation and sleep audio:** upload in /admin → Audio (files go straight from the browser to the public Supabase bucket `audio`; 50 MB per file on the free plan; mp3 at 64–96 kbps keeps files small). The Tools page has Meditate and Sleep players with a sleep timer that fades out.
 - **Betting plan:** runs fully on the person's device (localStorage). Nothing about betting is stored on the server.

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { PageHead, useToast } from "@/components/ui";
 import AudioTool from "@/components/AudioTool";
+import Morning from "@/components/Morning";
 import BetTool from "@/components/BetTool";
 import { useQuickExit } from "@/components/QuickExit";
 import { GROUND, PROMPTS, TOOLS } from "@/lib/data";
@@ -51,6 +52,7 @@ export default function Tools() {
       {tool === "breathe" && <Breathe />}
       {tool === "ground" && <Ground onDone={() => open(null)} />}
       {tool === "journal" && <Journal />}
+      {tool === "morning" && <><h1 className="display ptitle">Morning message</h1><p className="muted">A short message to start your day. Turn on the reminder to get it as a notification.</p><Morning /></>}
       {tool === "meditate" && <AudioTool kind="meditation" />}
       {tool === "sleep" && <AudioTool kind="sleep" />}
       {tool === "betting" && <BetTool />}

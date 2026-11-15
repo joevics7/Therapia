@@ -15,6 +15,7 @@ export const TOOLS = [
   { id: "breathe", name: "Breathe", sub: "One minute, box breathing", icon: "≋" },
   { id: "ground", name: "Ground yourself", sub: "The 5-4-3-2-1 steps", icon: "✦" },
   { id: "journal", name: "Journal", sub: "A private place to write", icon: "✎" },
+  { id: "morning", name: "Morning message", sub: "A daily lift, with a reminder", icon: "☀" },
   { id: "meditate", name: "Meditate", sub: "Guided audio to reset", icon: "☾" },
   { id: "sleep", name: "Sleep", sub: "Audio to wind down", icon: "☁" },
   { id: "betting", name: "Betting plan", sub: "Cut down step by step", icon: "◐" },

@@ -24,7 +24,8 @@ export default function Morning() {
     })();
   }, []);
 
-  if (!msg) return null; // nothing to show until an admin adds a message
+  if (msg === null) return <p className="muted">Loading…</p>;
+  if (!msg) return <p className="empty">Morning messages are coming soon.</p>;
 
   async function turnOn() {
     setNote(""); setBusy(true);
@@ -46,7 +47,6 @@ export default function Morning() {
 
   return (
     <section className="card stack morning">
-      <p className="eyebrow">Good morning</p>
       <p className="quote display" style={{ margin: 0 }}>{msg}</p>
       {hour === null ? (
         <span className="row" style={{ gap: 8, flexWrap: "wrap" }}>
