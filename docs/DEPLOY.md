@@ -124,3 +124,14 @@ The live connection lives in `MeetingProvider` (root layout), not on the room pa
 - Posts stay drafts until you tick Published.
 - AI rewrites of mental-health articles must be reviewed by a human before publishing.
 - Public pages: `/blog`, `/blog/<slug>`, `/sitemap.xml`, `/robots.txt`. English only for now; `article_translations.locale` is ready for more.
+
+### Blog automation (cron-job.org)
+
+1. Add `CRON_SECRET` (16+ random characters) on Vercel and redeploy.
+2. Daily, publish drafts (all drafts, oldest first; add `&limit=N` to publish at most N per call):
+   `https://therapia-three.vercel.app/api/cron/blog-publish?key=<CRON_SECRET>`
+3. Hourly, parse the oldest saved text into a draft:
+   `https://therapia-three.vercel.app/api/cron/blog-inbox?key=<CRON_SECRET>`
+4. Save text in **/admin → Blog → New article → Save content for later**. Table: `blog_inbox` (`not_processed` / `processed`). A saved item is tried 3 times, then skipped; its last error shows in the list.
+- The queue never overwrites an existing article (a taken slug becomes `slug-2`).
+- Auto-published AI content is not human-reviewed. Check drafts before the daily publish if you want to review them.
