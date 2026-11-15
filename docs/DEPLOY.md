@@ -111,3 +111,7 @@ Therapists, their available times and bookings live in the database and are mana
 - Members join the live audio automatically when the meeting is on and they are on the Meeting tab. Facilitators press **Start the meeting**. "Open slot" boxes are no longer shown to listeners.
 - Voice effects now run through the app's own audio pipeline before the mic is published.
 - **Facilitators need an email.** Add it in /admin → Facilitators; they sign in at /host/login with that email. Existing facilitators can have an email added there too. Changing a member-turned-facilitator's email means they must use /host/login from then on.
+
+## The meeting keeps going while you use the app
+
+The live connection lives in `MeetingProvider` (root layout), not on the room page. Members and facilitators can move around the app, read, chat or vent while listening or speaking. A bar at the top shows "Live · group name" with a mute/raise-hand button, a way back to the room, and Leave. Signing out or Quick exit ends the meeting. Refreshing or closing the page still disconnects, and phones may pause audio when the screen is locked or the browser is in the background.

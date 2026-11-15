@@ -1,21 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { LiveKitRoom, RoomAudioRenderer } from "@livekit/components-react";
 import { useEffect, useRef, useState } from "react";
-import { authPost } from "@/lib/api";
 import { useMembership } from "@/lib/join";
 import { hostLabel, type RoomDef, UNASSIGNED } from "@/lib/rooms";
 import GroupChat from "./GroupChat";
 import { useQuickExit } from "./QuickExit";
 import RoomView from "./RoomView";
+import { useMeeting } from "./MeetingProvider";
 import { HelpSheet } from "./ui";
 import Vent from "./Vent";
 import InviteSheet from "./InviteSheet";
 import { supabase } from "@/lib/supabase";
 
 type Tab = "meeting" | "chat" | "vent";
-type Joined = { token: string; url: string };
 
 /**
  * One screen for a group. You are inside as soon as you join: Chat and Vent always work.
@@ -30,15 +28,22 @@ export default function GroupRoom({ room, start }: { room: RoomDef; start: Tab }
   const [invite, setInvite] = useState(false);
   const [reqStatus, setReqStatus] = useState<string | null>(null);
   const [live, setLive] = useState(false);
-  const [joined, setJoined] = useState<Joined | null>(null);
-  const [connecting, setConnecting] = useState(false);
-  const [connErr, setConnErr] = useState("");
   const [declined, setDeclined] = useState(false); // the member chose to leave this live meeting
-  const busyTok = useRef(false);
+  const m = useMeeting();
+  const inHere = m.active?.roomId === room.id;
+  const connecting = m.status === "connecting";
+  const connErr = m.error;
+
+  // The meeting screen is open, so the top bar is not needed.
+  useEffect(() => {
+    m.stage(tab === "meeting" && inHere);
+    return () => m.stage(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, inHere]);
 
   // Is the facilitator in? Checked every few seconds while we are not already in the audio.
   useEffect(() => {
-    if (!member || joined) return;
+    if (!member || inHere) return;
     let stop = false;
     const tick = async () => {
       try {
@@ -49,7 +54,7 @@ export default function GroupRoom({ room, start }: { room: RoomDef; start: Tab }
     tick();
     const t = setInterval(tick, 6000);
     return () => { stop = true; clearInterval(t); };
-  }, [member, joined, room.id]);
+  }, [member, inHere, room.id]);
 
   // Someone who asked to join through an invitation sees where their request stands.
   useEffect(() => {
@@ -58,31 +63,20 @@ export default function GroupRoom({ room, start }: { room: RoomDef; start: Tab }
   }, [member, checked, room.id]);
 
   async function enterAudio() {
-    if (busyTok.current) return;
-    busyTok.current = true;
-    setConnecting(true);
-    setConnErr("");
-    try {
-      const t = await authPost<{ token?: string; url?: string; error?: string; code?: string }>("/api/token", { roomId: room.id });
-      if (t.status === 409 && t.data.code === "not_started") { setLive(false); return; }
-      if (!t.ok || !t.data.token || !t.data.url) { setConnErr(t.data.error ?? "Couldn't start audio. Try again."); return; }
-      setJoined({ token: t.data.token, url: t.data.url });
-    } catch {
-      setConnErr("No connection. Check your data and try again.");
-    } finally {
-      busyTok.current = false;
-      setConnecting(false);
-    }
+    if (!member) return;
+    const r = await m.join({ id: room.id, title: room.title }, member.isHost);
+    if (r === "not_started") setLive(false);
   }
-
-  const leaveAudio = (manual = false) => { setJoined(null); setLive(false); if (manual) setDeclined(true); };
+  const leaveHere = async () => { setDeclined(true); setLive(false); await m.leave(); };
 
   // Members go straight into the live meeting when it is on and they are looking at the Meeting tab. No extra button.
-  useEffect(() => { if (!live) setDeclined(false); }, [live]);
+  const autoTried = useRef(false); // try once per live meeting; after a failure the member taps "Try again"
+  useEffect(() => { if (!live) { setDeclined(false); autoTried.current = false; } }, [live]);
   useEffect(() => {
-    if (member && !member.isHost && tab === "meeting" && live && !joined && !declined) enterAudio();
+    if (member && !member.isHost && tab === "meeting" && live && !inHere && !declined && m.status === "idle" && !autoTried.current) { autoTried.current = true; enterAudio(); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [member, tab, live, joined, declined]);
+  }, [member, tab, live, inHere, declined, m.status]);
+
   const header = (
     <div>
       <div className="rc-cat">{room.cat}{room.women ? " · Women only" : ""}</div>
@@ -117,20 +111,8 @@ export default function GroupRoom({ room, start }: { room: RoomDef; start: Tab }
     );
   }
 
-  const meeting = joined ? (
-    <LiveKitRoom
-      token={joined.token}
-      serverUrl={joined.url}
-      connect
-      audio={false}
-      video={false}
-      options={{ publishDefaults: { dtx: true } }}
-      onDisconnected={() => leaveAudio(false)}
-      onError={() => setConnErr("Connection problem. Check your data.")}
-    >
-      <RoomAudioRenderer />
-      <RoomView room={room} host={member.isHost} token={joined.token} onLeave={leaveAudio} />
-    </LiveKitRoom>
+  const meeting = inHere ? (
+    <RoomView room={room} host={member.isHost} onLeave={leaveHere} />
   ) : member.isHost ? (
     <div className="card meetcard">
       <p className="display" style={{ fontSize: 20, margin: 0 }}>{live ? "Your meeting is live" : "Ready to start?"}</p>
@@ -156,7 +138,7 @@ export default function GroupRoom({ room, start }: { room: RoomDef; start: Tab }
   );
 
   return (
-    <div className={tab === "meeting" && joined ? "pg-wide" : "pg-narrow"}>
+    <div className={tab === "meeting" && inHere ? "pg-wide" : "pg-narrow"}>
       <div className="topbar">
         <Link className="btn ghost sm" href="/groups">← Groups</Link>
         <span className="row"><button className="btn soft sm" onClick={() => setInvite(true)}>+ Invite</button><button className="pill-help" onClick={() => setHelp(true)}>♥ Help</button><button className="btn ghost sm" onClick={quickExit}>Quick exit</button></span>
@@ -165,7 +147,7 @@ export default function GroupRoom({ room, start }: { room: RoomDef; start: Tab }
       {invite && <InviteSheet roomId={room.id} title={room.title} onClose={() => setInvite(false)} />}
       {header}
       <div className="tabs roomtabs" role="tablist">
-        <button className="tab" role="tab" aria-selected={tab === "meeting"} onClick={() => setTab("meeting")}>Meeting{(joined || live) && <span className="count">●</span>}</button>
+        <button className="tab" role="tab" aria-selected={tab === "meeting"} onClick={() => setTab("meeting")}>Meeting{(inHere || live) && <span className="count">●</span>}</button>
         <button className="tab" role="tab" aria-selected={tab === "chat"} onClick={() => setTab("chat")}>Chat</button>
         <button className="tab" role="tab" aria-selected={tab === "vent"} onClick={() => setTab("vent")}>Vent</button>
       </div>

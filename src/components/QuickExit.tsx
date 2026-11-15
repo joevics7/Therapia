@@ -15,6 +15,7 @@ export function QuickExitProvider({ children }: { children: React.ReactNode }) {
   const lastEsc = useRef(0);
 
   const exit = useCallback(() => setCovered(true), []);
+  useEffect(() => { if (covered) window.dispatchEvent(new Event("therapia:quickexit")); }, [covered]); // ends any live meeting
 
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
