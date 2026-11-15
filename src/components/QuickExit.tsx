@@ -1,5 +1,6 @@
 "use client";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useStored } from "@/lib/store";
 
 type Ctx = { armed: boolean; setArmed: (b: boolean) => void; exit: () => void };
@@ -10,6 +11,7 @@ export const useQuickExit = () => useContext(C);
 // It does not clear browser history, and the app says so in the Tools page.
 export function QuickExitProvider({ children }: { children: React.ReactNode }) {
   const [armed, setArmed] = useStored("qxArmed", false);
+  const router = useRouter();
   const [covered, setCovered] = useState(false);
   const last = useRef(0);
   const lastEsc = useRef(0);
@@ -43,7 +45,10 @@ export function QuickExitProvider({ children }: { children: React.ReactNode }) {
           <h1 className="cv-title" onClick={tap}>Notes</h1>
           <p className="cv-sub">Shopping list</p>
           <ul className="cv-list"><li>Rice, 5 kg</li><li>Tomatoes and pepper</li><li>Onions</li><li>Palm oil</li><li>Garri</li><li>Bread</li></ul>
-          <button className="cv-done" onClick={() => setCovered(false)}>Done</button>
+          <div className="cv-acts">
+            <button className="cv-done" onClick={() => setCovered(false)}>Done</button>
+            <button className="cv-done" onClick={() => { setCovered(false); router.push("/dashboard"); }}>Back to dashboard</button>
+          </div>
         </div>
       )}
     </C.Provider>
