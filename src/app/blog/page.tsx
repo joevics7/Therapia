@@ -17,7 +17,7 @@ export default async function BlogIndex() {
     <div className="pg-narrow blog">
       <div className="topbar">
         <Link className="wordmark display" href="/">Therapia</Link>
-        <span className="row" style={{ gap: 6 }}><Link className="btn ghost sm" href="/dashboard">Open app</Link><Link className="btn primary sm" href="/login?mode=up">Join</Link></span>
+        <Link className="btn ghost sm" href="/dashboard">← Back to dashboard</Link>
       </div>
       <h1 className="display ptitle">Blog</h1>
       <p className="muted">Practical, plain-language articles on stress, anxiety, grief, relationships and finding support.</p>
