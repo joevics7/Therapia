@@ -119,7 +119,7 @@ export default function GroupChat({ roomId, alias, isHost, compact }: { roomId: 
         <div ref={end} />
       </div>
       <form className="chatform" onSubmit={send}>
-        <input className="field" value={text} onChange={(e) => setText(e.target.value)} maxLength={240} placeholder="Write something kind…" autoComplete="off" aria-label="Message" />
+        <textarea className="field" rows={2} value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } }} maxLength={240} placeholder="Write something kind…" aria-label="Message" />
         <button className="btn primary" type="submit" aria-label="Send">Send</button>
       </form>
       <div className="chat-opts">

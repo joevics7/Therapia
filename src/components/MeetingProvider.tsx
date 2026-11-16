@@ -38,6 +38,8 @@ type Meeting = {
   invite: (identity: string) => Promise<void>;
   decline: (identity: string) => void;
   moveToListeners: (identity: string) => Promise<void>;
+  mute: (identity: string) => Promise<void>;
+  ban: (identity: string) => Promise<boolean>;
   stepDown: () => Promise<void>;
   endRoom: () => Promise<void>;
   getLevel: (identity: string) => number;
@@ -49,7 +51,7 @@ const noop = async () => {};
 const Ctx = createContext<Meeting>({
   active: null, status: "idle", error: "", participants: [], me: null, hands: [], myHand: false, micBusy: false, needSound: false,
   voice: "natural", setVoice: () => {}, join: async () => "error", leave: noop, enableSound: () => {}, toggleMic: noop, toggleHand: noop,
-  invite: noop, decline: () => {}, moveToListeners: noop, stepDown: noop, endRoom: noop, getLevel: () => 0, stage: () => {}, say: () => {},
+  invite: noop, decline: () => {}, moveToListeners: noop, mute: noop, ban: async () => false, stepDown: noop, endRoom: noop, getLevel: () => 0, stage: () => {}, say: () => {},
 });
 export const useMeeting = () => useContext(Ctx);
 
@@ -85,6 +87,7 @@ export default function MeetingProvider({ children }: { children: React.ReactNod
   const tokenRef = useRef("");
   const activeRef = useRef<Active | null>(null);
   const pipe = useRef<Pipe | null>(null);
+  const stopMicRef = useRef<() => Promise<void>>(async () => {});
   const audioBox = useRef<HTMLDivElement>(null);
   const joining = useRef(false);
   const handRef = useRef(false);
@@ -114,6 +117,7 @@ export default function MeetingProvider({ children }: { children: React.ReactNod
     p.ctx.close().catch(() => {});
     refresh();
   }, [refresh]);
+  useEffect(() => { stopMicRef.current = stopMic; }, [stopMic]);
 
   const send = useCallback((topic: string, payload: object) => {
     const r = roomRef.current;
@@ -139,6 +143,9 @@ export default function MeetingProvider({ children }: { children: React.ReactNod
     for (const e of [lk.RoomEvent.ParticipantConnected, lk.RoomEvent.ParticipantDisconnected, lk.RoomEvent.ActiveSpeakersChanged, lk.RoomEvent.TrackMuted, lk.RoomEvent.TrackUnmuted,
       lk.RoomEvent.TrackPublished, lk.RoomEvent.TrackUnpublished, lk.RoomEvent.LocalTrackPublished, lk.RoomEvent.LocalTrackUnpublished, lk.RoomEvent.ParticipantMetadataChanged,
       lk.RoomEvent.ParticipantNameChanged]) room.on(e, again);
+
+    // If the host mutes us, shut our mic fully so the button shows the truth and one tap turns it back on.
+    room.on(lk.RoomEvent.TrackMuted, (_pub, p) => { if (p.isLocal && pipe.current) stopMicRef.current(); });
 
     // Sound from other people: every audio track is played through a hidden element.
     room.on(lk.RoomEvent.TrackSubscribed, (track) => {
@@ -206,7 +213,7 @@ export default function MeetingProvider({ children }: { children: React.ReactNod
     }
   }, [attach, refresh, teardown]);
 
-  const control = useCallback(async (action: "allow" | "revoke" | "remove" | "end", identity?: string, useToken = false) => {
+  const control = useCallback(async (action: "allow" | "revoke" | "remove" | "end" | "mute" | "ban", identity?: string, useToken = false) => {
     const a = activeRef.current;
     if (!a) return false;
     const r = await authPost("/api/room-control", { action, roomId: a.roomId, identity, token: useToken ? tokenRef.current : undefined });
@@ -265,6 +272,12 @@ export default function MeetingProvider({ children }: { children: React.ReactNod
     send("hand", { type: "declined", to: identity }).catch(() => {});
   }, [send]);
   const moveToListeners = useCallback(async (identity: string) => { await control("revoke", identity); }, [control]);
+  const mute = useCallback(async (identity: string) => { if (await control("mute", identity)) say("Muted."); }, [control, say]);
+  const ban = useCallback(async (identity: string) => {
+    const ok = await control("ban", identity);
+    if (ok) { setHands((x) => x.filter((y) => y !== identity)); say("Banned from this group."); }
+    return ok;
+  }, [control, say]);
   const stepDown = useCallback(async () => {
     await stopMic();
     if (await control("revoke", undefined, true)) say("You stepped down. Still listening.");
@@ -304,8 +317,8 @@ export default function MeetingProvider({ children }: { children: React.ReactNod
 
   const value = useMemo<Meeting>(() => ({
     active, status, error, participants, me, hands, myHand, micBusy, needSound, voice, setVoice, join, leave, enableSound, toggleMic, toggleHand,
-    invite, decline, moveToListeners, stepDown, endRoom, getLevel, stage, say,
-  }), [active, status, error, participants, me, hands, myHand, micBusy, needSound, voice, setVoice, join, leave, enableSound, toggleMic, toggleHand, invite, decline, moveToListeners, stepDown, endRoom, getLevel, stage, say]);
+    invite, decline, moveToListeners, mute, ban, stepDown, endRoom, getLevel, stage, say,
+  }), [active, status, error, participants, me, hands, myHand, micBusy, needSound, voice, setVoice, join, leave, enableSound, toggleMic, toggleHand, invite, decline, moveToListeners, mute, ban, stepDown, endRoom, getLevel, stage, say]);
 
   return (
     <Ctx.Provider value={value}>

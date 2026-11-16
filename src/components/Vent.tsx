@@ -60,8 +60,6 @@ export default function Vent({ roomId, alias, isHost }: { roomId: string; alias:
   const [mine, setMine] = useState<Set<number>>(new Set());
   const [loaded, setLoaded] = useState(false);
   const [text, setText] = useState("");
-  const [showName, setShowName] = useState(false);
-  const [just, setJust] = useState(false);
   const [quote, setQuote] = useState<Post | null>(null);
   const [busy, setBusy] = useState(false);
   const [care, setCare] = useState(false); // the private "we're here" card
@@ -125,10 +123,10 @@ export default function Vent({ roomId, alias, isHost }: { roomId: string; alias:
     if (!body || busy) return;
     if (BLOCKED.test(body)) { say("Phone numbers and links aren't allowed. It keeps everyone safe."); return; }
     setBusy(true);
-    const { data, error } = await supabase().rpc("post_vent", { p_room: roomId, p_kind: "text", p_body: body, p_anonymous: !showName, p_just: just, p_quote: quote?.id ?? null, p_voice_path: null, p_voice_secs: null });
+    const { data, error } = await supabase().rpc("post_vent", { p_room: roomId, p_kind: "text", p_body: body, p_anonymous: false, p_just: false, p_quote: quote?.id ?? null, p_voice_path: null, p_voice_secs: null });
     setBusy(false);
     if (error || !data) { say(failMsg(error)); return; }
-    setText(""); setQuote(null); setJust(false);
+    setText(""); setQuote(null);
     afterPost(data as never);
   }
 
@@ -167,9 +165,9 @@ export default function Vent({ roomId, alias, isHost }: { roomId: string; alias:
       const up = await fetch(`/api/vent/voice?room=${encodeURIComponent(roomId)}`, { method: "POST", headers: { "Content-Type": clip.blob.type, Authorization: `Bearer ${await token()}` }, body: clip.blob });
       const u = await up.json().catch(() => ({}));
       if (!up.ok || !u.path) { say(u.error ?? "Couldn't send your voice note. Try again."); return; }
-      const { data, error } = await supabase().rpc("post_vent", { p_room: roomId, p_kind: "voice", p_body: null, p_anonymous: !showName, p_just: just, p_quote: quote?.id ?? null, p_voice_path: u.path, p_voice_secs: clip.secs });
+      const { data, error } = await supabase().rpc("post_vent", { p_room: roomId, p_kind: "voice", p_body: null, p_anonymous: false, p_just: false, p_quote: quote?.id ?? null, p_voice_path: u.path, p_voice_secs: clip.secs });
       if (error || !data) { say(failMsg(error)); return; }
-      setClip(null); setQuote(null); setJust(false);
+      setClip(null); setQuote(null);
       afterPost(data as never);
     } catch { say("No connection. Try again."); }
     finally { setBusy(false); }
@@ -243,11 +241,7 @@ export default function Vent({ roomId, alias, isHost }: { roomId: string; alias:
             </div>
           </>
         )}
-        <div className="vent-opts">
-          <label className="check"><input type="checkbox" checked={just} onChange={(e) => setJust(e.target.checked)} />Just venting <span className="fine">(only reactions, no replies)</span></label>
-          <label className="check"><input type="checkbox" checked={showName} onChange={(e) => setShowName(e.target.checked)} />Show my username</label>
-        </div>
-        <p className="fine">Your username is hidden unless you choose to show it. Voice notes are saved for 30 days, then deleted, and a voice can sometimes be recognised. If a post sounds like someone may be in danger, the host is alerted and can see who wrote it. Phone numbers and links are blocked.</p>
+        <p className="fine">Posts show your username. Voice notes are saved for 30 days, then deleted, and a voice can sometimes be recognised. If a post sounds like someone may be in danger, the host is alerted and can see who wrote it. Phone numbers and links are blocked.</p>
       </form>
 
       <div className="vent-list" role="log" aria-live="polite">
@@ -262,7 +256,6 @@ export default function Vent({ roomId, alias, isHost }: { roomId: string; alias:
                 <span className="av" style={{ "--s": "28px", background: p.anonymous ? "var(--muted)" : avatarVar(p.handle) } as React.CSSProperties} aria-hidden="true">{p.anonymous ? "?" : initials(p.handle)}</span>
                 <b>{own ? (p.anonymous ? "You (username hidden)" : "You") : p.handle}</b>
                 <span className="fine">{ago(p.created_at)}</span>
-                {p.just_venting && <span className="badge">Just venting</span>}
               </div>
               {p.quote_id && <blockquote className="quoted">{q ? (q.kind === "voice" ? "🎙 Voice note" : (q.body ?? "").slice(0, 140)) : "Original post removed"}</blockquote>}
               {p.kind === "text" ? <p className="vp-body">{p.body}</p> : p.voice_path && <VoicePlayer path={p.voice_path} secs={p.voice_secs} />}

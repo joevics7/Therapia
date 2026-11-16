@@ -6,6 +6,8 @@ import { VOICES } from "@/lib/voice";
 import { type RoomDef } from "@/lib/rooms";
 import { avatarVar, initials } from "@/lib/session";
 import { type PInfo, useMeeting } from "./MeetingProvider";
+import { Sheet } from "./ui";
+import { MAX_SPEAKERS } from "@/lib/rooms";
 
 const Avatar = ({ name, size }: { name: string; size: number }) => (
   <span className="av" style={{ "--s": `${size}px`, background: avatarVar(name) } as React.CSSProperties} aria-hidden="true">{initials(name)}</span>
@@ -39,6 +41,10 @@ export default function RoomView({ host, onLeave }: { room: RoomDef; host: boole
   const canSpeak = !!me && (me.role === "host" || me.canPublish);
   const micOn = !!me?.micOn;
   const nameOf = (p: PInfo) => (p.local ? "You" : p.name);
+  const [pick, setPick] = useState<string | null>(null);
+  const picked = pick ? participants.find((p) => p.identity === pick) ?? null : null;
+  const stageFull = speakers.length >= MAX_SPEAKERS;
+  const canPick = (p: PInfo) => host && !p.local && p.role !== "host";
 
   return (
     <div className="room meet">
@@ -81,10 +87,10 @@ export default function RoomView({ host, onLeave }: { room: RoomDef; host: boole
                 <span className="nm">{nameOf(g)}</span>
                 <span className="fine">{g.micOn ? "🎙 on" : "🔇 muted"}</span>
                 <Level id={g.identity} />
-                {host && <button className="btn ghost sm" onClick={() => m.moveToListeners(g.identity)}>Move to listeners</button>}
+                {canPick(g) && <button className="btn soft sm" onClick={() => setPick(g.identity)}>Manage</button>}
               </div>
             ))}
-            {host && guests.length === 0 && <p className="fine" style={{ gridColumn: "1 / -1" }}>Nobody else is speaking. Invite a listener who has raised a hand.</p>}
+            {host && guests.length === 0 && <p className="fine" style={{ gridColumn: "1 / -1" }}>Nobody else is speaking. Tap a listener below to let them speak.</p>}
           </div>
         )}
       </section>
@@ -97,19 +103,44 @@ export default function RoomView({ host, onLeave }: { room: RoomDef; host: boole
             const hand = handSet.has(p.identity);
             return (
               <div className={`ltile${hand ? " hand" : ""}`} key={p.identity}>
-                <span className="lav"><Avatar name={p.name} size={44} />{hand && <span className="handbadge" aria-label="Hand raised">✋</span>}</span>
-                <span className="nm">{nameOf(p)}</span>
-                {host && hand && (
-                  <span className="row" style={{ gap: 4, justifyContent: "center" }}>
-                    <button className="btn soft sm" onClick={() => m.invite(p.identity)}>Invite</button>
-                    <button className="btn ghost sm" onClick={() => m.decline(p.identity)}>Not now</button>
-                  </span>
+                {canPick(p) ? (
+                  <button type="button" className="ltap" onClick={() => setPick(p.identity)} aria-label={`Manage ${p.name}`}>
+                    <span className="lav"><Avatar name={p.name} size={44} />{hand && <span className="handbadge" aria-label="Hand raised">✋</span>}</span>
+                    <span className="nm">{nameOf(p)}</span>
+                  </button>
+                ) : (
+                  <>
+                    <span className="lav"><Avatar name={p.name} size={44} />{hand && <span className="handbadge" aria-label="Hand raised">✋</span>}</span>
+                    <span className="nm">{nameOf(p)}</span>
+                  </>
                 )}
               </div>
             );
           })}
         </div>
       </section>
+
+      {host && picked && canPick(picked) && (
+        <Sheet onClose={() => setPick(null)}>
+          <h3 className="display">{picked.name}</h3>
+          <p className="fine">{picked.canPublish ? `Speaking now · ${picked.micOn ? "mic on" : "muted"}` : handSet.has(picked.identity) ? "✋ Has a hand raised" : "Listening"}</p>
+          {!picked.canPublish && (
+            <>
+              <button className="btn primary" disabled={stageFull} onClick={async () => { await m.invite(picked.identity); setPick(null); }}>Let them speak</button>
+              {stageFull && <p className="fine">The stage is full (the host and up to {MAX_SPEAKERS - 1} speakers). Move someone back to listeners first.</p>}
+              {handSet.has(picked.identity) && <button className="btn soft" onClick={() => { m.decline(picked.identity); setPick(null); }}>Not now (lower their hand)</button>}
+            </>
+          )}
+          {picked.canPublish && (
+            <>
+              {picked.micOn && <button className="btn soft" onClick={async () => { await m.mute(picked.identity); setPick(null); }}>Mute them</button>}
+              <button className="btn soft" onClick={async () => { await m.moveToListeners(picked.identity); setPick(null); }}>Move to listeners</button>
+            </>
+          )}
+          <button className="btn ghost" onClick={async () => { if (window.confirm(`Ban ${picked.name} from this group? They will be removed now and can't rejoin.`)) { if (await m.ban(picked.identity)) setPick(null); } }}>Ban from group</button>
+          <button className="btn ghost" onClick={() => setPick(null)}>Close</button>
+        </Sheet>
+      )}
 
       <div className="dock">
         {canSpeak ? (

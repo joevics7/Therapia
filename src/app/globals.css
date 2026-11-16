@@ -485,3 +485,10 @@ body.has-meetbar { padding-top: calc(env(safe-area-inset-top, 0px) + 56px); }
 .prose img { max-width: 100%; height: auto; border-radius: 12px; }
 .prose table { display: block; overflow-x: auto; border-collapse: collapse; }
 .prose th, .prose td { border: 1px solid var(--line); padding: 6px 10px; text-align: left; }
+
+.ltap { all: unset; cursor: pointer; display: grid; justify-items: center; gap: 4px; min-width: 0; width: 100%; border-radius: 12px; padding: 4px 0; }
+.ltap:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.ltap:hover { background: var(--surface2); }
+.chatform textarea.field { resize: none; min-height: 44px; max-height: 140px; line-height: 1.4; }
+.chatform { align-items: flex-end; }
+.bub p, .vp-body { white-space: pre-wrap; overflow-wrap: anywhere; }
