@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useMembership } from "@/lib/join";
-import { hostLabel, type RoomDef, UNASSIGNED } from "@/lib/rooms";
+import { hostLabel, type RoomDef } from "@/lib/rooms";
 import GroupChat from "./GroupChat";
 import { useQuickExit } from "./QuickExit";
 import RoomView from "./RoomView";
@@ -16,13 +16,14 @@ import { supabase } from "@/lib/supabase";
 type Tab = "meeting" | "chat" | "vent";
 
 /**
- * One screen for a group. You are inside as soon as you join: Chat and Vent always work.
- * The Meeting tab shows "waiting for the facilitator" until they arrive, then offers the live audio.
+ * One screen for a group. You are inside as soon as you join: Chat and Vent are the main tabs and always work.
+ * A status pill says whether the meeting has started. The Meeting tab appears when it is live (the host always has it, to start it).
  */
 export default function GroupRoom({ room, start }: { room: RoomDef; start: Tab }) {
   const { ready, checked, username, member, needCode, busy, error, join } = useMembership(room.id);
   const { exit: quickExit } = useQuickExit();
-  const [tab, setTab] = useState<Tab>(start);
+  // Chat and Vent are the main tabs. The Meeting tab only exists while the meeting is on (always for the host, who starts it).
+  const [tab, setTab] = useState<Tab>(start === "meeting" ? "chat" : start);
   const [code, setCode] = useState("");
   const [help, setHelp] = useState(false);
   const [invite, setInvite] = useState(false);
@@ -31,15 +32,21 @@ export default function GroupRoom({ room, start }: { room: RoomDef; start: Tab }
   const [declined, setDeclined] = useState(false); // the member chose to leave this live meeting
   const m = useMeeting();
   const inHere = m.active?.roomId === room.id;
+  const isLive = live || inHere;
+  const hasMeeting = isLive || !!member?.isHost;
+  const shown: Tab = tab === "meeting" && !hasMeeting ? "chat" : tab;
+  const wantedMeeting = useRef(start === "meeting"); // opened from a "go to the meeting" link: switch over once, when it is live
   const connecting = m.status === "connecting";
   const connErr = m.error;
 
   // The meeting screen is open, so the top bar is not needed.
   useEffect(() => {
-    m.stage(tab === "meeting" && inHere);
+    m.stage(shown === "meeting" && inHere);
     return () => m.stage(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, inHere]);
+  }, [shown, inHere]);
+
+  useEffect(() => { if (wantedMeeting.current && isLive) { wantedMeeting.current = false; setTab("meeting"); } }, [isLive]);
 
   // Is the facilitator in? Checked every few seconds while we are not already in the audio.
   useEffect(() => {
@@ -48,7 +55,11 @@ export default function GroupRoom({ room, start }: { room: RoomDef; start: Tab }
     const tick = async () => {
       try {
         const d = await fetch("/api/rooms", { cache: "no-store" }).then((r) => r.json());
-        if (!stop && d.live) setLive(room.id in d.live);
+        if (!stop && d.live) {
+          const on = room.id in d.live;
+          setLive(on);
+          if (!on) wantedMeeting.current = false; // only land on the meeting if it was already live when we arrived; later we show a banner instead
+        }
       } catch { /* try again next time */ }
     };
     tick();
@@ -73,9 +84,9 @@ export default function GroupRoom({ room, start }: { room: RoomDef; start: Tab }
   const autoTried = useRef(false); // try once per live meeting; after a failure the member taps "Try again"
   useEffect(() => { if (!live) { setDeclined(false); autoTried.current = false; } }, [live]);
   useEffect(() => {
-    if (member && !member.isHost && tab === "meeting" && live && !inHere && !declined && m.status === "idle" && !autoTried.current) { autoTried.current = true; enterAudio(); }
+    if (member && !member.isHost && shown === "meeting" && live && !inHere && !declined && m.status === "idle" && !autoTried.current) { autoTried.current = true; enterAudio(); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [member, tab, live, inHere, declined, m.status]);
+  }, [member, shown, live, inHere, declined, m.status]);
 
   const header = (
     <div>
@@ -126,34 +137,34 @@ export default function GroupRoom({ room, start }: { room: RoomDef; start: Tab }
       {declined ? <p className="muted">You left the meeting.</p> : connErr ? <p className="err" role="alert">{connErr}</p> : <p className="muted">Joining the live meeting…</p>}
       {(declined || connErr) && <button className="btn accent big" onClick={() => { setDeclined(false); enterAudio(); }} disabled={connecting}>{connecting ? "Connecting…" : declined ? "Rejoin the meeting" : "Try again"}</button>}
     </div>
-  ) : (
-    <div className="card meetcard" role="status" aria-live="polite">
-      <p className="display" style={{ fontSize: 20, margin: 0 }}>Waiting for the facilitator</p>
-      <p className="muted">{room.host === UNASSIGNED ? "The meeting starts once a facilitator is assigned and joins." : `The meeting starts when ${room.host} arrives.`} This page will show a Join button the moment they are in. Meanwhile, chat and vent are open.</p>
-      <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
-        <button className="btn soft" onClick={() => setTab("chat")}>Chat with the group</button>
-        <button className="btn ghost" onClick={() => setTab("vent")}>Vent</button>
-      </div>
-    </div>
-  );
+  ) : null;
 
   return (
-    <div className={tab === "meeting" && inHere ? "pg-wide" : "pg-narrow"}>
-      <div className="topbar">
+    <div className={shown === "meeting" && inHere ? "pg-wide" : "pg-narrow"}>
+      <div className="topbar roomtop">
         <Link className="btn ghost sm" href="/groups">← Groups</Link>
-        <span className="row"><button className="btn soft sm" onClick={() => setInvite(true)}>+ Invite</button><button className="pill-help" onClick={() => setHelp(true)}>♥ Help</button><button className="btn ghost sm" onClick={quickExit}>Quick exit</button></span>
+        <button className="btn soft sm" onClick={() => setInvite(true)}>+ Invite</button>
+        <button className="pill-help" onClick={() => setHelp(true)}>♥ Help</button>
+        <button className="btn ghost sm" onClick={quickExit}>Quick exit</button>
       </div>
       {help && <HelpSheet onClose={() => setHelp(false)} />}
       {invite && <InviteSheet roomId={room.id} title={room.title} onClose={() => setInvite(false)} />}
       {header}
+      <div>{isLive ? <span className="livepill"><i />Live now</span> : <span className="livepill off">Not yet started</span>}</div>
+      {isLive && shown !== "meeting" && !member.isHost && (
+        <div className="card row" style={{ justifyContent: "space-between", alignItems: "center", gap: 10 }} role="status">
+          <span><b>The meeting is live.</b> <span className="muted">Join to listen.</span></span>
+          <button className="btn accent sm" onClick={() => setTab("meeting")}>Join</button>
+        </div>
+      )}
       <div className="tabs roomtabs" role="tablist">
-        <button className="tab" role="tab" aria-selected={tab === "meeting"} onClick={() => setTab("meeting")}>Meeting{(inHere || live) && <span className="count">●</span>}</button>
-        <button className="tab" role="tab" aria-selected={tab === "chat"} onClick={() => setTab("chat")}>Chat</button>
-        <button className="tab" role="tab" aria-selected={tab === "vent"} onClick={() => setTab("vent")}>Vent</button>
+        <button className="tab" role="tab" aria-selected={shown === "chat"} onClick={() => setTab("chat")}>Chat</button>
+        <button className="tab" role="tab" aria-selected={shown === "vent"} onClick={() => setTab("vent")}>Vent</button>
+        {hasMeeting && <button className="tab" role="tab" aria-selected={shown === "meeting"} onClick={() => setTab("meeting")}>Meeting{isLive && <span className="count">●</span>}</button>}
       </div>
-      <div hidden={tab !== "meeting"}>{meeting}</div>
-      <div hidden={tab !== "chat"}><GroupChat roomId={room.id} alias={member.alias} isHost={member.isHost} /></div>
-      <div hidden={tab !== "vent"}><Vent roomId={room.id} alias={member.alias} isHost={member.isHost} /></div>
+      {hasMeeting && <div hidden={shown !== "meeting"}>{meeting}</div>}
+      <div hidden={shown !== "chat"}><GroupChat roomId={room.id} alias={member.alias} isHost={member.isHost} /></div>
+      <div hidden={shown !== "vent"}><Vent roomId={room.id} alias={member.alias} isHost={member.isHost} /></div>
     </div>
   );
 }

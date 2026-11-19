@@ -492,3 +492,10 @@ body.has-meetbar { padding-top: calc(env(safe-area-inset-top, 0px) + 56px); }
 .chatform textarea.field { resize: none; min-height: 44px; max-height: 140px; line-height: 1.4; }
 .chatform { align-items: flex-end; }
 .bub p, .vp-body { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.livepill.off { color: var(--muted); background: var(--surface2); }
+.livepill.off i { display: none; }
+.roomtop { flex-wrap: nowrap; gap: 6px; }
+.roomtop > * { flex: none; white-space: nowrap; }
+.roomtop .btn.sm, .roomtop .pill-help { min-height: 36px; padding: 0 11px; font-size: 13px; }
+.roomtop > a.btn { margin-right: auto; }
