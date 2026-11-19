@@ -1,15 +1,4 @@
-// Sample library content. Therapists live in the database and are edited in /admin.
-
-export type LibItem = { id: string; type: "Book" | "Read" | "Audio"; title: string; blurb: string; len: string; price: string; pal: "a" | "b" | "c" | "d" | "e" };
-export const LIB: LibItem[] = [
-  { id: "b1", type: "Book", title: "Small Small Healing", blurb: "A gentle guide to starting again after a hard season.", len: "E-book · 42 pages", price: "₦2,000", pal: "d" },
-  { id: "b2", type: "Book", title: "After the Bet", blurb: "Plain talk on breaking the betting cycle, one day at a time.", len: "E-book · 36 pages", price: "₦1,500", pal: "a" },
-  { id: "r1", type: "Read", title: "What to say when you don’t know what to say", blurb: "A short read on supporting someone who is hurting.", len: "5 min read", price: "Free", pal: "c" },
-  { id: "r2", type: "Read", title: "Planning a safe exit: a checklist", blurb: "Practical steps to think through, at your own pace.", len: "7 min read", price: "Free", pal: "b" },
-  { id: "a1", type: "Audio", title: "Three minutes of calm", blurb: "A short guided pause for hustle stress.", len: "3 min audio", price: "Free", pal: "e" },
-  { id: "a2", type: "Audio", title: "Sleep after a heavy day", blurb: "A slow wind-down to help the mind rest.", len: "10 min audio", price: "Free", pal: "a" },
-];
-export const LIB_FILTERS = ["All", "Book", "Read", "Audio", "Saved"];
+// Static content for the tools. Therapists, groups, blog posts and audio live in the database and are edited in /admin.
 
 export const TOOLS = [
   { id: "breathe", name: "Breathe", sub: "One minute, box breathing", icon: "≋" },
