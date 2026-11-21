@@ -11,6 +11,7 @@ import { useMeeting } from "./MeetingProvider";
 import { HelpSheet } from "./ui";
 import Vent from "./Vent";
 import InviteSheet from "./InviteSheet";
+import GroupIntro from "./GroupIntro";
 import { supabase } from "@/lib/supabase";
 
 type Tab = "meeting" | "chat" | "vent";
@@ -133,7 +134,7 @@ export default function GroupRoom({ room, start }: { room: RoomDef; start: Tab }
     </div>
   ) : live ? (
     <div className="card meetcard" role="status" aria-live="polite">
-      <p className="display" style={{ fontSize: 20, margin: 0 }}><span className="livepill"><i />Live now</span></p>
+      <p className="display" style={{ fontSize: 20, margin: 0 }}>The meeting is live</p>
       {declined ? <p className="muted">You left the meeting.</p> : connErr ? <p className="err" role="alert">{connErr}</p> : <p className="muted">Joining the live meeting…</p>}
       {(declined || connErr) && <button className="btn accent big" onClick={() => { setDeclined(false); enterAudio(); }} disabled={connecting}>{connecting ? "Connecting…" : declined ? "Rejoin the meeting" : "Try again"}</button>}
     </div>
@@ -150,7 +151,8 @@ export default function GroupRoom({ room, start }: { room: RoomDef; start: Tab }
       {help && <HelpSheet onClose={() => setHelp(false)} />}
       {invite && <InviteSheet roomId={room.id} title={room.title} onClose={() => setInvite(false)} />}
       {header}
-      <div>{isLive ? <span className="livepill"><i />Live now</span> : <span className="livepill off">Not yet started</span>}</div>
+      {!inHere && <div>{isLive ? <span className="livepill"><i />Live now</span> : <span className="livepill off">Not yet started</span>}</div>}
+      {!isLive && <GroupIntro room={room} />}
       {isLive && shown !== "meeting" && !member.isHost && (
         <div className="card row" style={{ justifyContent: "space-between", alignItems: "center", gap: 10 }} role="status">
           <span><b>The meeting is live.</b> <span className="muted">Join to listen.</span></span>
@@ -158,9 +160,9 @@ export default function GroupRoom({ room, start }: { room: RoomDef; start: Tab }
         </div>
       )}
       <div className="tabs roomtabs" role="tablist">
+        {hasMeeting && <button className="tab" role="tab" aria-selected={shown === "meeting"} onClick={() => setTab("meeting")}>Meeting{isLive && <span className="count">●</span>}</button>}
         <button className="tab" role="tab" aria-selected={shown === "chat"} onClick={() => setTab("chat")}>Chat</button>
         <button className="tab" role="tab" aria-selected={shown === "vent"} onClick={() => setTab("vent")}>Vent</button>
-        {hasMeeting && <button className="tab" role="tab" aria-selected={shown === "meeting"} onClick={() => setTab("meeting")}>Meeting{isLive && <span className="count">●</span>}</button>}
       </div>
       {hasMeeting && <div hidden={shown !== "meeting"}>{meeting}</div>}
       <div hidden={shown !== "chat"}><GroupChat roomId={room.id} alias={member.alias} isHost={member.isHost} /></div>

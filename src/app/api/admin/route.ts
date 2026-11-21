@@ -57,7 +57,7 @@ export async function POST(req: Request) {
       // ---------- read everything the screen needs ----------
       case "overview": {
         const [rooms, profs, codes, sess] = await Promise.all([
-          db.from("rooms").select("id,title,cat,host_name,host_id,women_only,men_only,pal,schedule_text,days,start_time,active,created_at").order("created_at"),
+          db.from("rooms").select("id,title,cat,host_name,host_id,women_only,men_only,pal,schedule_text,about,days,start_time,active,created_at").order("created_at"),
           db.from("profiles").select("user_id,username,display_name").eq("role", "facilitator").order("created_at"),
           db.from("room_codes").select("room_id,expires_at,updated_at"),
           db.from("sessions").select("id,room_id,starts_at,note").gte("starts_at", new Date(Date.now() - 3600_000).toISOString()).order("starts_at"),
@@ -153,7 +153,7 @@ export async function POST(req: Request) {
           if (!f?.data || f.data.role !== "facilitator") return bad("Pick a facilitator from the list.");
           hostId = hid; hostName = f.data.display_name || f.data.username || "Facilitator";
         }
-        const fields = { title, cat, schedule_text: schedule, days, start_time: days.length ? time : null, pal, women_only: women, men_only: men, host_id: hostId, host_name: hostName, active: b.active !== false };
+        const fields = { title, cat, about: str(b.about, 400), schedule_text: schedule, days, start_time: days.length ? time : null, pal, women_only: women, men_only: men, host_id: hostId, host_name: hostName, active: b.active !== false };
         if (id) {
           if (!ROOM_ID.test(id)) return bad("Bad request.");
           const u = await db.from("rooms").update(fields).eq("id", id).select("id").maybeSingle();

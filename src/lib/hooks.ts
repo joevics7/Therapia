@@ -109,12 +109,12 @@ export function useRoom(id: string) {
       const sb = supabase();
       const [r, s] = await Promise.all([
         sb.from("rooms").select(ROOM_COLS).eq("id", id).maybeSingle(),
-        sb.from("sessions").select("starts_at").eq("room_id", id).gte("starts_at", new Date(Date.now() - 3600_000).toISOString()).order("starts_at").limit(1),
+        sb.rpc("room_next_start", { p_room: id }),
       ]);
       if (stop) return;
       if (!r.data) { setState({ room: null, status: "missing" }); return; }
-      const next = (s.data as { starts_at: string }[] | null)?.[0]?.starts_at;
-      setState({ room: { ...toRoom(r.data as Record<string, unknown>), next: next ? fmtLagos(next) : undefined }, status: "ready" });
+      const next = typeof s.data === "string" ? s.data : undefined;
+      setState({ room: { ...toRoom(r.data as Record<string, unknown>), next: next ? fmtLagos(next) : undefined, nextAt: next }, status: "ready" });
     })();
     return () => { stop = true; };
   }, [id]);

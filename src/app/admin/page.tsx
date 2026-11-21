@@ -13,7 +13,7 @@ import { Blog } from "./Blog";
 import { Audios, Motivation } from "./Content";
 import JoinRequests from "@/components/JoinRequests";
 
-type Room = { id: string; title: string; cat: string; host_name: string; host_id: string | null; women_only: boolean; men_only: boolean; pal: string; schedule_text: string | null; days: number[]; start_time: string | null; active: boolean };
+type Room = { id: string; title: string; cat: string; host_name: string; host_id: string | null; women_only: boolean; men_only: boolean; pal: string; schedule_text: string | null; about: string; days: number[]; start_time: string | null; active: boolean };
 type Fac = { user_id: string; username: string; display_name: string | null; email?: string | null };
 type Sess = { id: string; room_id: string; starts_at: string; note: string | null };
 type Code = { room_id: string; expires_at: string | null };
@@ -22,7 +22,7 @@ type Mem = { alias: string; handle: string; banned: boolean; joined_at: string; 
 type Rep = { id: string; room_id: string; reason: string; body_snapshot: string | null; created_at: string; vent_id?: number | null };
 type Call = (action: string, body?: object) => Promise<{ ok: boolean; data: Record<string, unknown> }>;
 
-const BLANK: Room = { id: "", title: "", cat: "", host_name: "", host_id: null, women_only: false, men_only: false, pal: "a", schedule_text: "", days: [], start_time: "19:00", active: true };
+const BLANK: Room = { id: "", title: "", cat: "", host_name: "", host_id: null, women_only: false, men_only: false, pal: "a", schedule_text: "", about: "", days: [], start_time: "19:00", active: true };
 const PALS = ["a", "b", "c", "d", "e"];
 
 /** Email + password sign-in for admins. There is no sign-up here. Accounts are made by the site owner in Supabase. */
@@ -178,6 +178,7 @@ function GroupEditor({ start, data, call, say, onClose, onChanged }: { start: Ro
       <div className="card stack">
         <label className="stack"><span className="eyebrow">Group name</span><input className="field" value={f.title} maxLength={60} onChange={(e) => set("title", e.target.value)} placeholder="e.g. Grief Support Circle" /></label>
         <label className="stack"><span className="eyebrow">Topic</span><input className="field" value={f.cat} maxLength={30} onChange={(e) => set("cat", e.target.value)} placeholder="e.g. Grief" /></label>
+        <label className="stack"><span className="eyebrow">About this group (shown to members before the meeting, max 400 characters)</span><textarea className="field" rows={3} maxLength={400} value={f.about} onChange={(e) => set("about", e.target.value)} placeholder="Who the group is for and what happens in it." /></label>
         <label className="stack"><span className="eyebrow">Facilitator (host)</span>
           <select className="field" value={f.host_id ?? ""} onChange={(e) => set("host_id", e.target.value || null)}>
             <option value="">No facilitator yet</option>

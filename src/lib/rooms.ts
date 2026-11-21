@@ -7,12 +7,14 @@ export type RoomDef = {
   host: string;
   when: string; // recurring schedule text, e.g. "Tue & Thu · 8:00 PM"
   next?: string; // next dated session, formatted in Lagos time
+  nextAt?: string; // the same moment as an ISO time, for the countdown
+  about: string;
   women: boolean;
   men: boolean;
   pal: Pal;
 };
 
-export const ROOM_COLS = "id,cat,title,host_name,schedule_text,women_only,men_only,pal";
+export const ROOM_COLS = "id,cat,title,host_name,schedule_text,women_only,men_only,pal,about";
 
 export function toRoom(r: Record<string, unknown>): RoomDef {
   return {
@@ -24,6 +26,7 @@ export function toRoom(r: Record<string, unknown>): RoomDef {
     women: !!r.women_only,
     men: !!r.men_only,
     pal: (r.pal as Pal) ?? "a",
+    about: String(r.about ?? ""),
   };
 }
 
