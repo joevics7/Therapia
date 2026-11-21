@@ -3,7 +3,7 @@
 const DOMAIN = process.env.NEXT_PUBLIC_RECOVERY_EMAIL_DOMAIN || "recovery.therapia.invalid";
 
 export const USERNAME_RE = /^[A-Za-z0-9_]{3,20}$/;
-const RESERVED = /(host|facilitator|admin|moderator|therapia|support|system|official|staff)/i;
+const RESERVED = /(host|facilitator|admin|moderator|therapia|theraping|support|system|official|staff)/i;
 
 export const emailFor = (username: string) => `${username.trim().toLowerCase()}@${DOMAIN}`;
 

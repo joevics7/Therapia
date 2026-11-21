@@ -1,4 +1,4 @@
-# Deploying Therapia on Vercel
+# Deploying Theraping on Vercel
 
 ## 1. Import the repo
 Vercel > Add New > Project > import `joevics7/Therapia`. Framework: Next.js (auto-detected). No build settings to change.
@@ -34,7 +34,7 @@ Set them for Production and Preview, then redeploy (public values are baked in a
 ## 5. Before real users
 - Re-check every number in `src/lib/help.ts` (the file says when they were last checked).
 - Create real facilitator accounts (see README) and set invite codes for women-only groups.
-- Decide who the "Therapia owner" is for crisis follow-ups (the host guide tells hosts to report to them).
+- Decide who the "Theraping owner" is for crisis follow-ups (the host guide tells hosts to report to them).
 - Microphone access needs HTTPS. Vercel provides it; for local testing use `localhost`.
 
 ## Admin page (`/admin`)
@@ -72,7 +72,7 @@ Privacy: the AI sees only the last few messages in the group, labelled Member A,
 
 ## Reminders (browser notifications)
 
-"Remind me" on a group sends a notification to the person's device about 15 minutes before each session, even when Therapia is closed. Sessions come from the group's weekly schedule (days and time, set in `/admin`) and from its dated sessions. The notification never names the group, because it can be read on a lock screen.
+"Remind me" on a group sends a notification to the person's device about 15 minutes before each session, even when Theraping is closed. Sessions come from the group's weekly schedule (days and time, set in `/admin`) and from its dated sessions. The notification never names the group, because it can be read on a lock screen.
 
 1. Make a VAPID key pair (once): `npx web-push generate-vapid-keys`.
 2. In Vercel add `NEXT_PUBLIC_VAPID_PUBLIC_KEY` (the public key), `VAPID_PRIVATE_KEY` (the private key, keep it secret) and `VAPID_SUBJECT` (for example `mailto:you@example.com`). Redeploy.
@@ -130,9 +130,9 @@ The live connection lives in `MeetingProvider` (root layout), not on the room pa
 No secret is needed; the URLs limit themselves (calls that come too early do nothing and return 429).
 
 1. Daily, publish drafts (all drafts, oldest first; add `?limit=N` to publish at most N). Runs at most once per 20 hours:
-   `https://therapia-three.vercel.app/api/cron/blog-publish`
+   `https://www.theraping.app/api/cron/blog-publish`
 2. Hourly, parse the oldest saved text into a draft. Runs at most once per 50 minutes:
-   `https://therapia-three.vercel.app/api/cron/blog-inbox`
+   `https://www.theraping.app/api/cron/blog-inbox`
 3. Save text in **/admin → Blog → New article → Save content for later**. Table: `blog_inbox` (`not_processed` / `processed`). A saved item is tried 3 times, then skipped; its last error shows in the list.
 - The queue never overwrites an existing article (a taken slug becomes `slug-2`).
 - Auto-published AI content is not human-reviewed.

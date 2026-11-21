@@ -33,7 +33,7 @@ export default function AudioTool({ kind }: { kind: "meditation" | "sleep" }) {
       setPlaying(true);
       end.current = timer ? Date.now() + timer * 60_000 : null;
       if ("mediaSession" in navigator) {
-        navigator.mediaSession.metadata = new MediaMetadata({ title: t.title, artist: "Therapia" });
+        navigator.mediaSession.metadata = new MediaMetadata({ title: t.title, artist: "Theraping" });
         navigator.mediaSession.setActionHandler("play", () => a.play());
         navigator.mediaSession.setActionHandler("pause", () => a.pause());
       }

@@ -34,5 +34,5 @@ export const CRISIS_STEPS = [
   "Do not promise to keep a safety risk secret. Say you want them to get proper help.",
   "Read out the helplines from the Need help now button, and ask them to call one now. If they are in immediate danger, ask them to call 112 or go to someone nearby.",
   "If you can, ask a co-host or listener to keep the group going while you stay with the person.",
-  "Afterwards, write down what happened without any names or details that could identify anyone, and tell the Therapia owner. Look after yourself too.",
+  "Afterwards, write down what happened without any names or details that could identify anyone, and tell the Theraping owner. Look after yourself too.",
 ];

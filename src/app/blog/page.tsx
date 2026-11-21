@@ -5,10 +5,10 @@ import { listPosts, niceDate, SITE } from "@/lib/blog";
 export const revalidate = 300;
 
 export const metadata: Metadata = {
-  title: "Blog | Therapia",
+  title: "Blog | Theraping",
   description: "Practical, plain-language articles on stress, anxiety, grief, relationships and getting support, written for Nigerians.",
   alternates: { canonical: `${SITE}/blog` },
-  openGraph: { title: "Therapia blog", description: "Practical, plain-language articles on mental health and getting support.", url: `${SITE}/blog`, type: "website" },
+  openGraph: { title: "Theraping blog", description: "Practical, plain-language articles on mental health and getting support.", url: `${SITE}/blog`, type: "website" },
 };
 
 export default async function BlogIndex() {
@@ -16,7 +16,7 @@ export default async function BlogIndex() {
   return (
     <div className="pg-narrow blog">
       <div className="topbar">
-        <Link className="wordmark display" href="/">Therapia</Link>
+        <Link className="wordmark display" href="/">Theraping</Link>
         <Link className="btn ghost sm" href="/dashboard">← Back to dashboard</Link>
       </div>
       <h1 className="display ptitle">Blog</h1>
@@ -32,7 +32,7 @@ export default async function BlogIndex() {
           </article>
         ))}
       </div>
-      <p className="fine blog-disc">Therapia articles are for information and are not a substitute for professional help. In an emergency, call 112.</p>
+      <p className="fine blog-disc">Theraping articles are for information and are not a substitute for professional help. In an emergency, call 112.</p>
     </div>
   );
 }

@@ -40,7 +40,7 @@ function AdminSignIn() {
   }
   return (
     <div className="pg-narrow">
-      <div className="topbar"><span className="wordmark display">Therapia <small className="muted">admin</small></span></div>
+      <div className="topbar"><span className="wordmark display">Theraping <small className="muted">admin</small></span></div>
       <h1 className="display ptitle">Admin sign-in</h1>
       <form className="card" onSubmit={submit}>
         <label htmlFor="ae" className="eyebrow">Email</label>
@@ -91,7 +91,7 @@ function Admin() {
     <div className="pg-wide adm">
       {toast}
       <div className="topbar">
-        <Link className="wordmark display" href="/">Therapia <small className="muted">admin</small></Link>
+        <Link className="wordmark display" href="/">Theraping <small className="muted">admin</small></Link>
         <span className="row"><Link className="btn ghost sm" href="/dashboard">App</Link><button className="btn ghost sm" onClick={() => signOut()}>Sign out</button></span>
       </div>
       <div className="seg" role="tablist" aria-label="Admin sections">

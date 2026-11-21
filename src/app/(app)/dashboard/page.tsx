@@ -136,7 +136,7 @@ export default function Dashboard() {
         <div><h3 className="display">Read the blog</h3><p className="muted">Plain-language articles on stress, anxiety, grief and getting support.</p></div>
         <div className="act"><Link className="btn primary sm" href="/blog">Open blog</Link></div>
       </section>
-      <div className="topbar"><Link className="btn ghost sm" href="/">About Therapia</Link></div>
+      <div className="topbar"><Link className="btn ghost sm" href="/">About Theraping</Link></div>
       </div>
       {help && <HelpSheet onClose={() => setHelp(false)} />}
     </div>

@@ -34,7 +34,7 @@ function Invite({ token }: { token: string }) {
 
   return (
     <div className="pg-narrow">
-      <div className="topbar"><Link className="wordmark display" href="/dashboard">Therapia</Link></div>
+      <div className="topbar"><Link className="wordmark display" href="/dashboard">Theraping</Link></div>
       {pv === null ? <p className="muted">Loading…</p> : !pv.ok ? (
         <div className="card stack">
           <p className="display" style={{ fontSize: 20, margin: 0 }}>This invitation isn&rsquo;t valid</p>

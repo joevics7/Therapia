@@ -1,4 +1,4 @@
-# Therapia
+# Theraping
 
 Anonymous voice support groups, one-on-one therapy and self-help tools for Nigeria, then Africa.
 
@@ -58,4 +58,4 @@ The Need help now button (every app screen, and inside live rooms and group chat
 - Security questions are weaker than a recovery code, and answers can be guessed by someone who knows the person. A 6-word code shown once at sign-up could be added later as a stronger option.
 - Changing `RECOVERY_PEPPER` (or the service-role key if the pepper is unset) stops username lookup working for existing accounts. Password recovery is not affected.
 - Voice effects are a disguise, not a guarantee. They make a voice harder to recognise but not impossible.
-- Helpline numbers were verified from public directories on 9 Nov 2026. Confirm them with each organisation before launch; ask SURPIN or MANI whether they will accept referrals from Therapia hosts.
+- Helpline numbers were verified from public directories on 9 Nov 2026. Confirm them with each organisation before launch; ask SURPIN or MANI whether they will accept referrals from Theraping hosts.

@@ -302,7 +302,7 @@ export default function MeetingProvider({ children }: { children: React.ReactNod
   // Tells the phone that audio is playing, which helps it keep going when the screen is off.
   useEffect(() => {
     if (!active || typeof navigator === "undefined" || !("mediaSession" in navigator) || typeof MediaMetadata === "undefined") return;
-    navigator.mediaSession.metadata = new MediaMetadata({ title: "Therapia group", artist: "Live meeting" });
+    navigator.mediaSession.metadata = new MediaMetadata({ title: "Theraping group", artist: "Live meeting" });
     return () => { navigator.mediaSession.metadata = null; };
   }, [active]);
 

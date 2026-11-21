@@ -1,6 +1,6 @@
 import { publicClient } from "./supabase";
 
-export const SITE = (process.env.NEXT_PUBLIC_SITE_URL || "https://therapia-three.vercel.app").replace(/\/$/, "");
+export const SITE = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.theraping.app").replace(/\/$/, "");
 
 export type Post = {
   slug: string; category_slug: string; published_at: string | null; updated_at: string;

@@ -45,7 +45,7 @@ function Login() {
 
   return (
     <div className="pg-narrow">
-      <div className="topbar"><Link className="wordmark display" href="/">Therapia</Link></div>
+      <div className="topbar"><Link className="wordmark display" href="/">Theraping</Link></div>
       <div>
         <h1 className="display ptitle">{mode === "in" ? "Welcome back" : "Make your name"}</h1>
         <p className="muted">{mode === "in" ? "Sign in with your username and password." : "No email. No phone number. Just a username and a password."}</p>

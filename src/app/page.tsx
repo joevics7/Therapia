@@ -22,12 +22,12 @@ export default function Landing() {
 
   const join = signedIn
     ? <Link className="btn accent big" href="/dashboard">Go to your dashboard</Link>
-    : <Link className="btn accent big" href="/login?mode=up">Join Therapia</Link>;
+    : <Link className="btn accent big" href="/login?mode=up">Join Theraping</Link>;
 
   return (
     <div className="lp">
       <header className="lp-nav">
-        <span className="wordmark display">Therapia</span>
+        <span className="wordmark display">Theraping</span>
         <nav aria-label="Account">
           {signedIn
             ? <Link className="btn primary sm" href="/dashboard">Dashboard</Link>
@@ -39,7 +39,7 @@ export default function Landing() {
         <div className="lp-copy">
           <span className="lp-pill">Free · Anonymous · Made for Africa</span>
           <h1 className="display">Say it out loud.<br />Nobody has to know it&rsquo;s&nbsp;you.</h1>
-          <p>Therapia is a safe place to talk. Join free voice groups led by trained facilitators, at set times, chat with people who get it, or book a therapist. You choose a username, never your real name.</p>
+          <p>Theraping is a safe place to talk. Join free voice groups led by trained facilitators, at set times, chat with people who get it, or book a therapist. You choose a username, never your real name.</p>
           <div className="lp-cta">{join}{!signedIn && <Link className="btn ghost big" href="/login">I already have an account</Link>}</div>
           <ul className="lp-ticks">
             <li>No email. No phone number.</li>
@@ -57,8 +57,8 @@ export default function Landing() {
       </section>
 
       <section className="lp-sec">
-        <h2 className="display">What is Therapia?</h2>
-        <p className="lp-lead">Many of us carry things we cannot say at home, at church or at work. Therapia gives you a private place to say them, and people who will listen without judging.</p>
+        <h2 className="display">What is Theraping?</h2>
+        <p className="lp-lead">Many of us carry things we cannot say at home, at church or at work. Theraping gives you a private place to say them, and people who will listen without judging.</p>
         <div className="lp-trio">
           <div className="lp-card"><PhotoSlot name="about-1" who="zainab" className="sm" /><h3>Talk in voice rooms</h3><p>Join a group by topic. Listen quietly for as long as you like. Raise your hand when you are ready to speak.</p></div>
           <div className="lp-card"><PhotoSlot name="about-2" who="kola" className="sm" /><h3>Chat, then it disappears</h3><p>Every group has a text chat. Messages delete themselves after 7 days.</p></div>
@@ -109,7 +109,7 @@ export default function Landing() {
       </section>
 
       <footer className="lp-foot">
-        <span className="muted">Therapia is peer support and therapy booking. If you are in danger now, call 112.</span>
+        <span className="muted">Theraping is peer support and therapy booking. If you are in danger now, call 112.</span>
         <span><Link href="/blog">Blog</Link> · <Link href="/host/login">Facilitator sign-in</Link> · <Link href="/forgot">Forgot password?</Link></span>
       </footer>
     </div>

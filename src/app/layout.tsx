@@ -5,7 +5,7 @@ import MeetingProvider from "@/components/MeetingProvider";
 import { QuickExitProvider } from "@/components/QuickExit";
 
 export const metadata: Metadata = {
-  title: "Therapia",
+  title: "Theraping",
   description: "Anonymous voice support groups. Say it out loud. Nobody has to know it's you.",
 };
 export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover" };

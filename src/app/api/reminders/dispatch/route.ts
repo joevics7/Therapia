@@ -17,7 +17,7 @@ export async function POST() {
   if (!pub || !priv || !db) return NextResponse.json({ status: "unavailable" });
   const limit = await db.rpc("rate_allow", { p_key: "reminders:dispatch", p_max: 60, p_window_secs: 3600 });
   if (limit.data === false) return NextResponse.json({ status: "limited" });
-  webpush.setVapidDetails(process.env.VAPID_SUBJECT || "mailto:admin@therapia.invalid", pub, priv);
+  webpush.setVapidDetails(process.env.VAPID_SUBJECT || "https://www.theraping.app", pub, priv);
 
   const due = await db.rpc("due_reminders");
   const rows = (due.data ?? []) as { user_id: string; room_id: string; starts_at: string }[];
@@ -29,7 +29,7 @@ export async function POST() {
     const mark = await db.from("reminder_log").insert({ user_id: d.user_id, room_id: d.room_id, starts_at: d.starts_at });
     if (mark.error) continue;
     const minutes = Math.max(1, Math.round((new Date(d.starts_at).getTime() - Date.now()) / 60000));
-    const payload = JSON.stringify({ title: "Therapia", body: `Your group starts in about ${minutes} minute${minutes === 1 ? "" : "s"}.`, url: `/room/${d.room_id}`, tag: `r-${d.room_id}` });
+    const payload = JSON.stringify({ title: "Theraping", body: `Your meeting starts in about ${minutes} minute${minutes === 1 ? "" : "s"}.`, url: `/room/${d.room_id}`, tag: `r-${d.room_id}` });
     for (const s of list) {
       try {
         await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, { TTL: 900, urgency: "high" });

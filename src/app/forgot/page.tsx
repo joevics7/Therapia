@@ -21,7 +21,7 @@ export default function Forgot() {
   const switchTo = (m: "pw" | "name") => { setMode(m); };
   return (
     <div className="pg-narrow">
-      <div className="topbar"><Link className="wordmark display" href="/">Therapia</Link></div>
+      <div className="topbar"><Link className="wordmark display" href="/">Theraping</Link></div>
       <div><h1 className="display ptitle">{mode === "pw" ? "Forgot your password?" : "Forgot your username?"}</h1><p className="muted">Your two security questions get you back in.</p></div>
       <div className="seg" role="group" aria-label="What did you forget" style={{ justifySelf: "start" }}>
         <button type="button" aria-pressed={mode === "pw"} onClick={() => switchTo("pw")}>My password</button>

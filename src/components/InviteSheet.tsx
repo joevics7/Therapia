@@ -19,13 +19,13 @@ export default function InviteSheet({ roomId, title, onClose }: { roomId: string
   useEffect(() => { call("get"); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [roomId]);
 
   const link = inv ? `${window.location.origin}/invite/${inv.token}` : "";
-  const text = `I'd like you to join "${title}" on Therapia, a private, anonymous support space. No real names needed.`;
+  const text = `I'd like you to join "${title}" on Theraping, a private, anonymous support space. No real names needed.`;
 
   async function copy() {
     try { await navigator.clipboard.writeText(link); setNote("Link copied."); } catch { setNote("Press and hold the link to copy it."); }
   }
   async function share() {
-    try { await navigator.share({ title: "Therapia", text, url: link }); } catch { /* cancelled */ }
+    try { await navigator.share({ title: "Theraping", text, url: link }); } catch { /* cancelled */ }
   }
 
   return (

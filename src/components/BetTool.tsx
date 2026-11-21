@@ -30,7 +30,7 @@ export default function BetTool() {
     return (
       <>
         <h1 className="display ptitle">Betting plan</h1>
-        <p className="muted">Cut down gradually, one week at a time, or stop completely. This stays on your phone. Nobody else can see it, and nothing is sent to Therapia.</p>
+        <p className="muted">Cut down gradually, one week at a time, or stop completely. This stays on your phone. Nobody else can see it, and nothing is sent to Theraping.</p>
         <form className="card stack" onSubmit={(e) => {
           e.preventDefault();
           const b = Number(base.replace(/[, ]/g, ""));

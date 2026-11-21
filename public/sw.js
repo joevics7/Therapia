@@ -1,4 +1,4 @@
-// Therapia service worker: shows reminder notifications, even when the site is closed.
+// Theraping service worker: shows reminder notifications, even when the site is closed.
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (e) => e.waitUntil(self.clients.claim()));
 
@@ -6,7 +6,7 @@ self.addEventListener("push", (event) => {
   let d = {};
   try { d = event.data ? event.data.json() : {}; } catch { /* use the defaults */ }
   event.waitUntil(
-    self.registration.showNotification(d.title || "Therapia", {
+    self.registration.showNotification(d.title || "Theraping", {
       body: d.body || "A group you follow starts soon.",
       tag: d.tag || "therapia-reminder",
       data: { url: d.url || "/groups" },

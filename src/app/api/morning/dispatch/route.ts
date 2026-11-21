@@ -16,7 +16,7 @@ export async function POST() {
   if (!pub || !priv || !db) return NextResponse.json({ status: "unavailable" });
   const limit = await db.rpc("rate_allow", { p_key: "morning:dispatch", p_max: 40, p_window_secs: 3600 });
   if (limit.data === false) return NextResponse.json({ status: "limited" });
-  webpush.setVapidDetails(process.env.VAPID_SUBJECT || "mailto:admin@therapia.invalid", pub, priv);
+  webpush.setVapidDetails(process.env.VAPID_SUBJECT || "https://www.theraping.app", pub, priv);
 
   const msg = await db.rpc("todays_motivation");
   const body = typeof msg.data === "string" ? msg.data : "";

@@ -24,8 +24,8 @@ export function pushState(): PushState {
 }
 
 export const pushMessage: Record<Exclude<PushState, "ready">, string> = {
-  unsupported: "This browser can't show notifications. Try Chrome or Firefox, or add Therapia to your home screen.",
-  "needs-install": "On iPhone, tap Share, then Add to Home Screen, open Therapia from there, and try again.",
+  unsupported: "This browser can't show notifications. Try Chrome or Firefox, or add Theraping to your home screen.",
+  "needs-install": "On iPhone, tap Share, then Add to Home Screen, open Theraping from there, and try again.",
   "not-configured": "Reminders aren't switched on for this site yet.",
   denied: "Notifications are blocked. Allow them for this site in your browser settings, then try again.",
 };
