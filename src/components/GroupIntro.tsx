@@ -31,6 +31,7 @@ export default function GroupIntro({ room }: { room: RoomDef }) {
         </div>
       )}
       {room.about && <p style={{ margin: 0 }}>{room.about}</p>}
+      <p className="row" style={{ gap: 6, flexWrap: "wrap", margin: 0 }}><span className="badge">Led by a qualified expert</span><span className="badge">Free</span><span className="badge">Anonymous</span></p>
       <div>
         <span className="eyebrow">{names.length > 1 ? "Facilitators" : "Facilitator"}</span>
         {names.length === 0 ? <p className="muted" style={{ margin: "4px 0 0" }}>To be announced.</p> : (
