@@ -47,7 +47,7 @@ export default function Groups() {
   const rest = list.filter((r) => !(r.id in live));
 
   const card = (r: RoomDef) => (
-    <article key={r.id} className={`rcard pal-${r.pal}`}>
+    <article key={r.id} className={`rcard pal-${r.pal}${r.id in live ? " is-live" : ""}`}>
       <div className="tile ankara" aria-hidden="true" />
       <div>
         <div className="rc-cat">{r.cat}</div>
@@ -60,7 +60,7 @@ export default function Groups() {
         </div>
       </div>
       <div className="rc-act row">
-        <Link className={`btn sm ${r.id in live ? "accent" : "ghost"}`} href={`/room/${r.id}`}>{r.id in live ? "Join" : "Open room"}</Link>
+        <Link className={`btn sm ${r.id in live ? "accent" : "ghost"}`} href={`/room/${r.id}`}>{r.id in live ? "Join meeting" : "Open room"}</Link>
         <Link className="btn sm ghost" href={`/chat/${r.id}`}>Chat</Link>
         {!(r.id in live) && <button className="btn sm soft" aria-pressed={!!on[r.id]} onClick={() => remind(r)}>{on[r.id] ? "Reminder on ✓" : "Remind me"}</button>}
       </div>

@@ -499,3 +499,6 @@ body.has-meetbar { padding-top: calc(env(safe-area-inset-top, 0px) + 56px); }
 .roomtop > * { flex: none; white-space: nowrap; }
 .roomtop .btn.sm, .roomtop .pill-help { min-height: 36px; padding: 0 11px; font-size: 13px; }
 .roomtop > a.btn { margin-right: auto; }
+
+/* A meeting that has already started stands out from the rest */
+.rcard.is-live { background: color-mix(in srgb, var(--live) 9%, var(--surface)); border-color: color-mix(in srgb, var(--live) 45%, var(--line)); box-shadow: 0 0 0 1px color-mix(in srgb, var(--live) 25%, transparent); }
