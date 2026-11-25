@@ -2,9 +2,12 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useStored } from "@/lib/store";
+import Arcade from "@/components/Arcade";
+import { type Wallet, dayKey, newWallet, topUp } from "@/lib/arcade";
 
 type Plan = { mode: "reduce" | "quit"; start: string; baseline: number; step: number };
 type Bet = { at: string; amount: number };
+type UrgeNote = { at: string; after: "much" | "bit" | "same" | "more"; rounds: number };
 const DAY = 86_400_000;
 const naira = (n: number) => `₦${Math.round(n).toLocaleString()}`;
 const round100 = (n: number) => Math.max(0, Math.round(n / 100) * 100);
@@ -15,16 +18,33 @@ export default function BetTool() {
   const [log, setLog] = useStored<Bet[]>("bet.log", []);
   const [urges, setUrges] = useStored<string[]>("bet.urges", []);
   const [base, setBase] = useState(""), [step, setStep] = useState(20), [amt, setAmt] = useState("");
-  const [wait, setWait] = useState<number | null>(null); // seconds left on the urge timer
+  const [wallet, setWallet] = useStored<Wallet | null>("bet.wallet", null);
+  const [urgeLog, setUrgeLog] = useStored<UrgeNote[]>("bet.urgelog", []);
+  const [playing, setPlaying] = useState(false);
   const [note, setNote] = useState("");
 
+  // Everyone starts with 100 coins; +10 a day; +30 for each finished day without a logged bet.
   useEffect(() => {
-    if (wait === null || wait <= 0) return;
-    const id = setTimeout(() => setWait((w) => (w === null ? null : w - 1)), 1000);
-    return () => clearTimeout(id);
-  }, [wait]);
+    if (!ready) return;
+    const betDays = new Set(log.map((b) => dayKey(new Date(b.at))));
+    setWallet((w) => { const cur = w ?? newWallet(); const next = topUp(cur, plan, betDays); return next === cur && w ? w : next; });
+  }, [ready, plan, log, setWallet]);
 
   if (!ready) return null;
+
+  const arcade = (
+    <Arcade
+      wallet={wallet ?? newWallet()}
+      setWallet={(f) => setWallet((w) => f(w ?? newWallet()))}
+      onDone={(after, rounds) => {
+        if (after) { setUrgeLog((l) => [{ at: new Date().toISOString(), after, rounds }, ...l].slice(0, 200)); setUrges((u) => [new Date().toISOString(), ...u]); }
+        setPlaying(false);
+        setNote(after === "much" || after === "bit" ? "Well done. The urge passed without a bet." : "Thanks for telling us. If it's still strong, open a group and talk to someone.");
+      }}
+    />
+  );
+
+  if (playing) return arcade;
 
   if (!plan) {
     return (
@@ -44,6 +64,7 @@ export default function BetTool() {
           {note && <p className="err" role="alert">{note}</p>}
           <button className="btn primary" type="submit">Start my plan</button>
         </form>
+        <button className="btn soft" type="button" onClick={() => { setNote(""); setPlaying(true); }}>Feeling an urge now? Play instead</button>
         <p className="fine">Be honest with yourself here; the plan only works with real numbers. If you want to stop completely, you can switch after you start.</p>
       </>
     );
@@ -70,22 +91,6 @@ export default function BetTool() {
     setNote(spent + n > cap ? "Logged. That's over this week's limit. It happens; one slip doesn't undo your progress. Next week starts fresh." : "Logged. Thank you for being honest.");
   }
 
-  if (wait !== null) {
-    return (
-      <>
-        <h1 className="display ptitle">Ride it out</h1>
-        <p className="muted">Urges to bet rise, peak and fade, usually within 10 to 20 minutes. You don&rsquo;t have to fight it. Just wait it out and do something else.</p>
-        <div className="card stack" style={{ textAlign: "center" }}>
-          <b className="display" style={{ fontSize: 44 }}>{wait > 0 ? `${Math.floor(wait / 60)}:${String(wait % 60).padStart(2, "0")}` : "Well done"}</b>
-          <p className="muted">{wait > 0 ? "Put the phone down, drink some water, walk around, or call someone." : "The urge has most likely eased."}</p>
-          <button className="btn soft" onClick={() => { window.location.hash = "breathe"; }}>Breathe for one minute</button>
-          <button className="btn primary" onClick={() => { setUrges((u) => [new Date().toISOString(), ...u]); setWait(null); setNote("Logged as an urge you rode out."); }}>I rode it out</button>
-          <button className="btn ghost" onClick={() => setWait(null)}>Back</button>
-        </div>
-      </>
-    );
-  }
-
   return (
     <>
       <h1 className="display ptitle">Betting plan</h1>
@@ -101,10 +106,12 @@ export default function BetTool() {
           <span><b>{clean}</b> <span className="fine">days without a bet</span></span>
           <span><b>{urges.length}</b> <span className="fine">urges ridden out</span></span>
           <span><b>~{naira(saved)}</b> <span className="fine">estimated kept</span></span>
+          <span><b>🪙 {(wallet ?? newWallet()).coins}</b> <span className="fine">play coins</span></span>
+          {urgeLog.length > 0 && <span><b>{urgeLog.filter((u) => u.after === "much" || u.after === "bit").length}/{urgeLog.length}</b> <span className="fine">times the urge dropped after playing</span></span>}
         </span>
       </div>
 
-      <button className="btn accent big" onClick={() => { setNote(""); setWait(600); }}>I want to bet right now</button>
+      <button className="btn accent big" onClick={() => { setNote(""); setPlaying(true); }}>I want to bet right now</button>
 
       <form className="card stack" onSubmit={add}>
         <label className="stack"><span className="eyebrow">I placed a bet (₦)</span><input className="field" inputMode="numeric" value={amt} onChange={(e) => setAmt(e.target.value)} placeholder="Amount" /></label>
