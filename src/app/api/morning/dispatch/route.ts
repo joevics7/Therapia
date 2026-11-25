@@ -18,9 +18,6 @@ export async function POST() {
   if (limit.data === false) return NextResponse.json({ status: "limited" });
   webpush.setVapidDetails(process.env.VAPID_SUBJECT || "https://www.theraping.app", pub, priv);
 
-  const msg = await db.rpc("todays_motivation");
-  const body = typeof msg.data === "string" ? msg.data : "";
-  if (!body) return NextResponse.json({ status: "no-message" });
   const due = await db.rpc("due_morning");
   const rows = (due.data ?? []) as { user_id: string; local_day: string }[];
   let sent = 0, failed = 0;
@@ -28,6 +25,9 @@ export async function POST() {
     // Mark it done first, so a slow run can never send twice.
     const mark = await db.from("morning_prefs").update({ last_sent: d.local_day }).eq("user_id", d.user_id);
     if (mark.error) continue;
+    const msg = await db.rpc("motivation_for", { p_user: d.user_id }); // matches what this person said they need help with
+    const body = typeof msg.data === "string" ? msg.data : "";
+    if (!body) continue; // nothing suitable today
     const subs = await db.from("push_subscriptions").select("id,endpoint,p256dh,auth").eq("user_id", d.user_id);
     const payload = JSON.stringify({ title: "Good morning", body, url: "/dashboard", tag: "morning" });
     for (const s of (subs.data ?? []) as { id: string; endpoint: string; p256dh: string; auth: string }[]) {

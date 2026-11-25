@@ -2,27 +2,30 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import NeedsPicker from "@/components/NeedsPicker";
+import { needLabel } from "@/lib/needs";
 
 type Call = (action: string, body?: object) => Promise<{ ok: boolean; data: Record<string, unknown> }>;
 type Say = (m: string) => void;
 
-type Msg = { id: string; body: string; active: boolean; created_at: string };
+type Msg = { id: string; body: string; active: boolean; topics: string[]; created_at: string };
 
 /** Morning messages: one shows per day on the dashboard (cycling through the active ones) and goes out as the morning notification. */
 export function Motivation({ call, say }: { call: Call; say: Say }) {
   const [items, setItems] = useState<Msg[] | null>(null);
   const [text, setText] = useState("");
   const [editing, setEditing] = useState<string | null>(null);
+  const [topics, setTopics] = useState<string[]>([]);
   const load = useCallback(async () => { setItems(((await call("motivations.list")).data.items as Msg[]) ?? []); }, [call]);
   useEffect(() => { load(); }, [load]);
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
-    const r = await call("motivation.save", { id: editing ?? undefined, body: text });
+    const r = await call("motivation.save", { id: editing ?? undefined, body: text, topics });
     if (!r.ok) { say(String(r.data.error ?? "Couldn't save.")); return; }
-    setText(""); setEditing(null); say("Saved."); load();
+    setText(""); setTopics([]); setEditing(null); say("Saved."); load();
   }
-  async function toggle(m: Msg) { await call("motivation.save", { id: m.id, body: m.body, active: !m.active }); load(); }
+  async function toggle(m: Msg) { await call("motivation.save", { id: m.id, body: m.body, active: !m.active, topics: m.topics }); load(); }
   async function del(m: Msg) {
     if (!window.confirm("Delete this message?")) return;
     const r = await call("motivation.delete", { id: m.id });
@@ -33,22 +36,23 @@ export function Motivation({ call, say }: { call: Call; say: Say }) {
   return (
     <section className="stack">
       <h1 className="display ptitle" style={{ fontSize: 24, margin: 0 }}>Morning messages</h1>
-      <p className="muted">One message shows each day, cycling through the active ones. People who turn on morning notifications get the same message at their chosen time.</p>
+      <p className="muted">Each person gets one message a day, chosen from the messages for everyone plus the ones tagged with the topics they picked at sign-up. It shows in Tools and goes out as the morning notification at the time they chose.</p>
       <form className="card stack" onSubmit={save}>
         <label className="stack"><span className="eyebrow">{editing ? "Edit message" : "New message"} (max 400 characters)</span>
           <textarea className="field" rows={3} maxLength={400} required value={text} onChange={(e) => setText(e.target.value)} placeholder="Today you only need to take the next small step." /></label>
+        <div className="stack"><span className="eyebrow">Who gets it (leave all off for everyone)</span><NeedsPicker value={topics} onChange={setTopics} /></div>
         <span className="row" style={{ gap: 8 }}>
           <button className="btn primary sm" type="submit">{editing ? "Save changes" : "Add message"}</button>
-          {editing && <button type="button" className="btn ghost sm" onClick={() => { setEditing(null); setText(""); }}>Cancel</button>}
+          {editing && <button type="button" className="btn ghost sm" onClick={() => { setEditing(null); setText(""); setTopics([]); }}>Cancel</button>}
         </span>
       </form>
       {items === null && <p className="muted">Loading…</p>}
       {items && items.length === 0 && <p className="muted">No messages yet. Without any, no morning notification is sent.</p>}
       {items?.map((m) => (
         <article className="card row adm-line" key={m.id} style={{ flexWrap: "wrap", gap: 8 }}>
-          <span style={{ flex: "1 1 240px", minWidth: 0 }}>{m.body} <span className="badge">{m.active ? "Active" : "Off"}</span></span>
+          <span style={{ flex: "1 1 240px", minWidth: 0 }}>{m.body} <span className="badge">{m.active ? "Active" : "Off"}</span> <span className="fine">{m.topics.length ? m.topics.map(needLabel).join(", ") : "Everyone"}</span></span>
           <span className="row" style={{ gap: 6 }}>
-            <button className="btn soft sm" onClick={() => { setEditing(m.id); setText(m.body); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Edit</button>
+            <button className="btn soft sm" onClick={() => { setEditing(m.id); setText(m.body); setTopics(m.topics ?? []); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Edit</button>
             <button className="btn soft sm" onClick={() => toggle(m)}>{m.active ? "Turn off" : "Turn on"}</button>
             <button className="btn ghost sm" onClick={() => del(m)}>Delete</button>
           </span>

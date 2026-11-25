@@ -21,6 +21,7 @@ export default function BetTool() {
   const [wallet, setWallet] = useStored<Wallet | null>("bet.wallet", null);
   const [urgeLog, setUrgeLog] = useStored<UrgeNote[]>("bet.urgelog", []);
   const [playing, setPlaying] = useState(false);
+  const [choosing, setChoosing] = useState(false); // the "what would help right now" page
   const [note, setNote] = useState("");
 
   // Everyone starts with 100 coins; +10 a day; +30 for each finished day without a logged bet.
@@ -46,6 +47,24 @@ export default function BetTool() {
 
   if (playing) return arcade;
 
+  if (choosing) {
+    return (
+      <>
+        <h1 className="display ptitle">Take a moment</h1>
+        <p className="muted">The urge is strong right now, and that&rsquo;s okay. Pick one thing to do instead of betting.</p>
+        <button className="card row adm-line" style={{ textAlign: "left", gap: 14, cursor: "pointer" }} onClick={() => { window.location.hash = "breathe"; }}>
+          <span style={{ fontSize: 34 }} aria-hidden="true">🌬️</span>
+          <span><b className="display" style={{ fontSize: 20 }}>Take deep breaths</b><br /><span className="muted">A guided minute to slow your body down.</span></span>
+        </button>
+        <button className="card row adm-line" style={{ textAlign: "left", gap: 14, cursor: "pointer" }} onClick={() => { setChoosing(false); setPlaying(true); }}>
+          <span style={{ fontSize: 34 }} aria-hidden="true">🎮</span>
+          <span><b className="display" style={{ fontSize: 20 }}>Play games</b><br /><span className="muted">Bet made-up coins on quick games. No real money.</span></span>
+        </button>
+        <button className="btn ghost" onClick={() => setChoosing(false)}>← Back</button>
+      </>
+    );
+  }
+
   if (!plan) {
     return (
       <>
@@ -64,7 +83,7 @@ export default function BetTool() {
           {note && <p className="err" role="alert">{note}</p>}
           <button className="btn primary" type="submit">Start my plan</button>
         </form>
-        <button className="btn soft" type="button" onClick={() => { setNote(""); setPlaying(true); }}>Feeling an urge now? Play instead</button>
+        <button className="btn soft" type="button" onClick={() => { setNote(""); setChoosing(true); }}>Feeling an urge now? Get help now</button>
         <p className="fine">Be honest with yourself here; the plan only works with real numbers. If you want to stop completely, you can switch after you start.</p>
       </>
     );
@@ -111,7 +130,7 @@ export default function BetTool() {
         </span>
       </div>
 
-      <button className="btn accent big" onClick={() => { setNote(""); setPlaying(true); }}>I want to bet right now</button>
+      <button className="btn accent big" onClick={() => { setNote(""); setChoosing(true); }}>I want to bet right now</button>
 
       <form className="card stack" onSubmit={add}>
         <label className="stack"><span className="eyebrow">I placed a bet (₦)</span><input className="field" inputMode="numeric" value={amt} onChange={(e) => setAmt(e.target.value)} placeholder="Amount" /></label>

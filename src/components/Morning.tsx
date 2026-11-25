@@ -2,6 +2,8 @@
 import { useEffect, useState } from "react";
 import { enablePush, pushActive, pushMessage, pushState } from "@/lib/push";
 import { supabase } from "@/lib/supabase";
+import NeedsPicker from "./NeedsPicker";
+import { needLabel } from "@/lib/needs";
 
 const HOURS = [5, 6, 7, 8, 9, 10];
 const label = (h: number) => `${h % 12 || 12}:00 ${h < 12 ? "am" : "pm"}`;
@@ -13,19 +15,28 @@ export default function Morning() {
   const [pick, setPick] = useState(7);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
+  const [needs, setNeeds] = useState<string[] | null>(null);
+  const [editing, setEditing] = useState(false);
 
   useEffect(() => {
     (async () => {
-      const m = await supabase().rpc("todays_motivation");
+      const m = await supabase().rpc("my_motivation");
       setMsg(typeof m.data === "string" && m.data ? m.data : "");
+      const n = await supabase().from("user_needs").select("needs").maybeSingle();
+      setNeeds((n.data as { needs: string[] } | null)?.needs ?? []);
       const mine = await supabase().rpc("my_morning");
       const h = (mine.data as { hour: number }[] | null)?.[0]?.hour;
       if (typeof h === "number" && (await pushActive())) { setHour(h); setPick(h); }
     })();
   }, []);
 
+  async function saveNeeds(v: string[]) {
+    setNeeds(v);
+    await supabase().from("user_needs").upsert({ needs: v });
+    const m = await supabase().rpc("my_motivation");
+    setMsg(typeof m.data === "string" && m.data ? m.data : "");
+  }
   if (msg === null) return <p className="muted">Loading…</p>;
-  if (!msg) return <p className="empty">Morning messages are coming soon.</p>;
 
   async function turnOn() {
     setNote(""); setBusy(true);
@@ -45,7 +56,26 @@ export default function Morning() {
     setBusy(false); setHour(null); setNote("");
   }
 
+  const topics = (
+    <section className="card stack">
+      <span className="eyebrow">Your topics</span>
+      {!editing ? (
+        <>
+          <p className="muted" style={{ margin: 0 }}>{needs && needs.length ? needs.map(needLabel).join(", ") : "None chosen. You get general messages."}</p>
+          <button className="btn soft sm" onClick={() => setEditing(true)}>Change topics</button>
+        </>
+      ) : (
+        <>
+          <NeedsPicker value={needs ?? []} onChange={saveNeeds} />
+          <button className="btn primary sm" onClick={() => setEditing(false)}>Done</button>
+        </>
+      )}
+    </section>
+  );
+  if (!msg) return <><p className="empty">Morning messages are coming soon.</p>{topics}</>;
+
   return (
+    <>
     <section className="card stack morning">
       <p className="quote display" style={{ margin: 0 }}>{msg}</p>
       {hour === null ? (
@@ -62,5 +92,7 @@ export default function Morning() {
       )}
       {note && <p className="fine" role="status">{note}</p>}
     </section>
+    {topics}
+    </>
   );
 }

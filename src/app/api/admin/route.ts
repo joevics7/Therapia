@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { adminClient } from "@/lib/admin";
 import { passwordProblem, usernameProblem } from "@/lib/identity";
 import { runExtraction } from "@/lib/blog-ai.server";
+import { NEED_IDS } from "@/lib/needs";
 import { bearer, livekitEnv, ROOM_ID } from "@/lib/server";
 import { userClient } from "@/lib/supabase";
 
@@ -319,7 +320,7 @@ export async function POST(req: Request) {
 
       // ---------- morning motivation ----------
       case "motivations.list": {
-        const r = await db.from("motivations").select("id, body, active, created_at").order("created_at", { ascending: false }).limit(500);
+        const r = await db.from("motivations").select("id, body, active, topics, created_at").order("created_at", { ascending: false }).limit(500);
         if (r.error) return bad("Couldn't load messages.", 500);
         return J({ items: r.data ?? [] });
       }
@@ -327,7 +328,8 @@ export async function POST(req: Request) {
         const body = str(b.body, 400), id = str(b.id, 60);
         if (!body) return bad("Write the message.");
         if (id && !/^[0-9a-f-]{36}$/i.test(id)) return bad("Bad request.");
-        const row = { body, active: b.active !== false };
+        const topics = Array.isArray(b.topics) ? [...new Set(b.topics.map(String))].filter((t) => NEED_IDS.includes(t)) : [];
+        const row = { body, active: b.active !== false, topics };
         const r = id ? await db.from("motivations").update(row).eq("id", id) : await db.from("motivations").insert(row);
         if (r.error) return bad("Couldn't save.", 500);
         return J({ ok: true });

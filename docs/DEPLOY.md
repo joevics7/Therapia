@@ -149,3 +149,11 @@ No secret is needed; the URLs limit themselves (calls that come too early do not
 - **Play instead (Tools → Betting plan → "I want to bet right now"):** five zero-money mini-games (Ball Throw with a throw-it-yourself mode, Danfo Race, Higher or Lower, Lagos Trip, Tug of War). Coins are made up: everyone starts with 100, +10 each day, +30 for each finished day without a logged bet (up to 7 days are caught up), max stake 5 per round, never below 0, cannot be bought or cashed out. At 0 coins only the free throw-it-yourself game is playable, with links to a group and breathing.
 - After playing, the person says how the urge feels. Wallet, urge answers and the plan stay on the device (localStorage). Nothing about betting is sent to the server.
 - Odds shown on screen are the real odds (the race odds come from simulating the same race thousands of times). All logic is in `src/lib/arcade.ts`.
+
+## What do you need help with (onboarding) and morning messages
+
+- After sign-up, listeners see `/welcome`: "What do you need help with?" (multi-select, Skip allowed). Existing accounts are asked once the next time they open the app. Facilitators and admins are not asked.
+- Answers are stored in `user_needs` (private by RLS, only the owner can read or change their row). People can change them any time in Tools → Morning message → Change topics.
+- In `/admin` → Morning messages, tag each message with topics. No topics = everyone. Each person gets one message a day from "everyone" plus their own topics (`motivation_for`). If nothing matches, they get none that day.
+- The morning push (`/api/morning/dispatch`, every 15 min) sends that person's message at their chosen time. Topic ids live in `src/lib/needs.ts` and must match the DB check on `user_needs`.
+- "I want to bet right now" opens a two-option page: deep breathing or play-coin games.
