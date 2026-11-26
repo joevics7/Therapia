@@ -157,3 +157,6 @@ No secret is needed; the URLs limit themselves (calls that come too early do not
 - In `/admin` → Morning messages, tag each message with topics. No topics = everyone. Each person gets one message a day from "everyone" plus their own topics (`motivation_for`). If nothing matches, they get none that day.
 - The morning push (`/api/morning/dispatch`, every 15 min) sends that person's message at their chosen time. Topic ids live in `src/lib/needs.ts` and must match the DB check on `user_needs`.
 - "I want to bet right now" opens a two-option page: deep breathing or play-coin games.
+
+### Loading the morning messages
+`docs/morning-messages.json` holds 1,500 messages (50 for each of the 30 topics) plus 12 for everyone. In `/admin` → Morning messages, press "Import from file" and choose it. Messages that already exist are skipped, so importing twice is safe. Edit, turn off or delete any message afterwards; use the "Show" filter to review one topic at a time.

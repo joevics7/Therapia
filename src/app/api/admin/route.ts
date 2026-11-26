@@ -320,9 +320,35 @@ export async function POST(req: Request) {
 
       // ---------- morning motivation ----------
       case "motivations.list": {
-        const r = await db.from("motivations").select("id, body, active, topics, created_at").order("created_at", { ascending: false }).limit(500);
+        const topic = str(b.topic, 20) || "all";
+        let q = db.from("motivations").select("id, body, active, topics, created_at", { count: "exact" });
+        if (topic === "everyone") q = q.eq("topics", "{}");
+        else if (NEED_IDS.includes(topic)) q = q.contains("topics", [topic]);
+        const r = await q.order("created_at", { ascending: false }).range(0, 99);
         if (r.error) return bad("Couldn't load messages.", 500);
-        return J({ items: r.data ?? [] });
+        return J({ items: r.data ?? [], total: r.count ?? 0 });
+      }
+      case "motivations.import": {
+        // { everyone: [..], betting: [..], ... } or [{ body, topics }]. Skips messages that already exist.
+        const rows: { body: string; topics: string[]; active: boolean }[] = [];
+        const add = (body: unknown, topics: string[]) => { const t = str(body, 400); if (t) rows.push({ body: t, topics, active: true }); };
+        const src = b.data;
+        if (Array.isArray(src)) for (const x of src as { body?: unknown; topics?: unknown }[]) add(x?.body, Array.isArray(x?.topics) ? (x.topics as unknown[]).map(String).filter((t) => NEED_IDS.includes(t)) : []);
+        else if (src && typeof src === "object") for (const [k, v] of Object.entries(src as Record<string, unknown>)) {
+          if (k !== "everyone" && !NEED_IDS.includes(k)) return bad(`Unknown topic "${k}".`);
+          if (Array.isArray(v)) for (const m of v) add(m, k === "everyone" ? [] : [k]);
+        }
+        if (!rows.length) return bad("Nothing to import.");
+        if (rows.length > 3000) return bad("Too many messages in one import (max 3000).");
+        const have = await db.from("motivations").select("body, topics").limit(10000);
+        if (have.error) return bad("Couldn't import.", 500);
+        const seen = new Set((have.data ?? []).map((m) => `${[...(m.topics ?? [])].sort().join(",")}|${m.body}`));
+        const fresh = rows.filter((m) => !seen.has(`${[...m.topics].sort().join(",")}|${m.body}`));
+        for (let i = 0; i < fresh.length; i += 200) {
+          const r = await db.from("motivations").insert(fresh.slice(i, i + 200));
+          if (r.error) return bad("Couldn't import (some may have been added).", 500);
+        }
+        return J({ ok: true, added: fresh.length, skipped: rows.length - fresh.length });
       }
       case "motivation.save": {
         const body = str(b.body, 400), id = str(b.id, 60);

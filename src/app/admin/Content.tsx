@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import NeedsPicker from "@/components/NeedsPicker";
-import { needLabel } from "@/lib/needs";
+import { NEEDS, needLabel } from "@/lib/needs";
 
 type Call = (action: string, body?: object) => Promise<{ ok: boolean; data: Record<string, unknown> }>;
 type Say = (m: string) => void;
@@ -16,7 +16,12 @@ export function Motivation({ call, say }: { call: Call; say: Say }) {
   const [text, setText] = useState("");
   const [editing, setEditing] = useState<string | null>(null);
   const [topics, setTopics] = useState<string[]>([]);
-  const load = useCallback(async () => { setItems(((await call("motivations.list")).data.items as Msg[]) ?? []); }, [call]);
+  const [filter, setFilter] = useState("all");
+  const [total, setTotal] = useState(0);
+  const load = useCallback(async () => {
+    const r = await call("motivations.list", { topic: filter });
+    setItems((r.data.items as Msg[]) ?? []); setTotal(Number(r.data.total ?? 0));
+  }, [call, filter]);
   useEffect(() => { load(); }, [load]);
 
   async function save(e: React.FormEvent) {
@@ -24,6 +29,14 @@ export function Motivation({ call, say }: { call: Call; say: Say }) {
     const r = await call("motivation.save", { id: editing ?? undefined, body: text, topics });
     if (!r.ok) { say(String(r.data.error ?? "Couldn't save.")); return; }
     setText(""); setTopics([]); setEditing(null); say("Saved."); load();
+  }
+  async function importFile(f: File | undefined) {
+    if (!f) return;
+    let data: unknown;
+    try { data = JSON.parse(await f.text()); } catch { say("That file isn't valid JSON."); return; }
+    const r = await call("motivations.import", { data });
+    say(r.ok ? `Added ${r.data.added}, skipped ${r.data.skipped} already there.` : String(r.data.error ?? "Couldn't import."));
+    load();
   }
   async function toggle(m: Msg) { await call("motivation.save", { id: m.id, body: m.body, active: !m.active, topics: m.topics }); load(); }
   async function del(m: Msg) {
@@ -46,8 +59,18 @@ export function Motivation({ call, say }: { call: Call; say: Say }) {
           {editing && <button type="button" className="btn ghost sm" onClick={() => { setEditing(null); setText(""); setTopics([]); }}>Cancel</button>}
         </span>
       </form>
+      <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+        <label className="row" style={{ gap: 6 }}><span className="fine">Show</span>
+          <select className="field" style={{ width: "auto" }} value={filter} onChange={(e) => setFilter(e.target.value)}>
+            <option value="all">All topics</option><option value="everyone">Everyone</option>
+            {NEEDS.map((n) => <option key={n.id} value={n.id}>{n.label}</option>)}
+          </select></label>
+        <span className="fine">{total} message{total === 1 ? "" : "s"}{total > 100 ? " (showing the newest 100)" : ""}</span>
+        <label className="btn soft sm" style={{ marginLeft: "auto", cursor: "pointer" }}>Import from file
+          <input type="file" accept="application/json,.json" hidden onChange={(e) => { importFile(e.target.files?.[0]); e.target.value = ""; }} /></label>
+      </div>
       {items === null && <p className="muted">Loading…</p>}
-      {items && items.length === 0 && <p className="muted">No messages yet. Without any, no morning notification is sent.</p>}
+      {items && items.length === 0 && <p className="muted">No messages here yet. Without any, no morning notification is sent.</p>}
       {items?.map((m) => (
         <article className="card row adm-line" key={m.id} style={{ flexWrap: "wrap", gap: 8 }}>
           <span style={{ flex: "1 1 240px", minWidth: 0 }}>{m.body} <span className="badge">{m.active ? "Active" : "Off"}</span> <span className="fine">{m.topics.length ? m.topics.map(needLabel).join(", ") : "Everyone"}</span></span>
