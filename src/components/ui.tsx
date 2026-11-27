@@ -15,16 +15,16 @@ export function useToast() {
   return { say, toast };
 }
 
-export function Sheet({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+export function Sheet({ children, onClose, center }: { children: React.ReactNode; onClose: () => void; center?: boolean }) {
   useEffect(() => {
     const k = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", k);
     return () => window.removeEventListener("keydown", k);
   }, [onClose]);
   return (
-    <div className="sheet-root">
+    <div className={`sheet-root${center ? " center" : ""}`}>
       <div className="sheet-bd" onClick={onClose} />
-      <div className="sheet" role="dialog" aria-modal="true">{children}</div>
+      <div className={`sheet${center ? " center" : ""}`} role="dialog" aria-modal="true">{children}</div>
     </div>
   );
 }

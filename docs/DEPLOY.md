@@ -160,3 +160,6 @@ No secret is needed; the URLs limit themselves (calls that come too early do not
 
 ### Loading the morning messages
 `docs/morning-messages.json` holds 1,500 messages (50 for each of the 30 topics) plus 12 for everyone. In `/admin` → Morning messages, press "Import from file" and choose it. Messages that already exist are skipped, so importing twice is safe. Edit, turn off or delete any message afterwards; use the "Show" filter to review one topic at a time.
+
+### Games: how they stay fair
+Every price (the x number next to a choice) comes from simulating the real chances, with about 5% taken off, so what is shown matches what happens. Ball Throw has occasional rocket and slip throws (equally likely, so Over and Under stay even). Higher or Lower drifts with occasional big jumps and shows recent numbers. Lagos Trip has hidden accidents and shortcuts and three outcomes (Quick, About right, Stuck). After every 8 rounds a centred reminder pops up that can be closed.

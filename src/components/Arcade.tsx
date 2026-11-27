@@ -1,18 +1,19 @@
 "use client";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Sheet } from "@/components/ui";
 import {
-  CONDITIONS, FIGHTERS, MAX_STAKE, RACERS, THROWERS, type Trip, type Wallet,
-  hiLoMults, hiLoNext, multFor, newMatch, newTrip, raceMults, raceStep, selfThrow, throwDistance, tripMinutes, tugChance, tugWinner, winnings,
+  FIGHTERS, MAX_STAKE, RACERS, THROWERS, THROW_MAX, TRIP_BUCKETS, type ThrowKind, type Trip, type TripBucket, type Wallet,
+  hiLoMults, hiLoNext, hiLoStart, multFor, newMatch, newTrip, raceMults, raceStep, selfThrow, throwOutcome, tripBucket, tripLimits, tripMinutes, tripMults, tugChance, tugWinner, winnings,
 } from "@/lib/arcade";
 
 type GameId = "throw" | "race" | "hilo" | "trip" | "tug";
-const GAMES: { id: GameId; name: string; emoji: string; blurb: string }[] = [
-  { id: "throw", name: "Ball Throw", emoji: "⚾", blurb: "Bet on how far the ball goes, or throw it yourself." },
-  { id: "race", name: "Danfo Race", emoji: "🚌", blurb: "Pick the winner of a street race." },
-  { id: "hilo", name: "Higher or Lower", emoji: "🔢", blurb: "Will the next number be higher or lower?" },
-  { id: "trip", name: "Lagos Trip", emoji: "🚗", blurb: "Will the trip take more or less time?" },
-  { id: "tug", name: "Tug of War", emoji: "🪢", blurb: "Back the stronger puller." },
+const GAMES: { id: GameId; name: string; emoji: string; blurb: string; how: string }[] = [
+  { id: "throw", name: "Ball Throw", emoji: "⚾", blurb: "Bet on how far the ball goes, or throw it yourself.", how: "Pick Over or Under the line, then watch the throw (watch out for rockets and slips): a right call doubles your coins." },
+  { id: "race", name: "Danfo Race", emoji: "🚌", blurb: "Pick the winner of a street race.", how: "Pick the vehicle you think will win: a win pays the number next to it, so the longer shot pays more." },
+  { id: "hilo", name: "Higher or Lower", emoji: "🔢", blurb: "Read the trend: will the next number go up or down?", how: "Study the last numbers, then guess if the next one goes Higher or Lower; big jumps can happen, and the harder call pays more." },
+  { id: "trip", name: "Lagos Trip", emoji: "🚗", blurb: "How long will the trip really take?", how: "Guess if the trip will be Quick, About right or Stuck: the less likely the result, the more it pays, and accidents or shortcuts can happen." },
+  { id: "tug", name: "Tug of War", emoji: "🪢", blurb: "Back the stronger puller.", how: "Back the fighter you think will win the rope: the weaker one wins less often but pays more." },
 ];
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const NUDGE_AT = 8;
@@ -69,32 +70,34 @@ function ThrowBet({ coins, settle }: { coins: number; settle: (d: number) => voi
   const r = useRound({ coins, settle });
   const [i, setI] = useState(() => Math.floor(Math.random() * THROWERS.length));
   const [dist, setDist] = useState<number | null>(null);
+  const [kind, setKind] = useState<ThrowKind>("normal");
   const [fly, setFly] = useState(false);
   const t = THROWERS[i], line = Math.round(t.avg);
+  const flight = kind === "rocket" ? 0.6 : kind === "slip" ? 1.0 : 1.4; // seconds: rockets really are faster
   async function go(over: boolean) {
     r.setBusy(true); r.setMsg(null);
-    const d = throwDistance(t); setDist(d); setFly(false);
-    await wait(50); setFly(true); await wait(1500);
-    r.finish(d === line ? "push" : (d > line) === over, 2);
+    const o = throwOutcome(t); setDist(o.dist); setKind(o.kind); setFly(false);
+    await wait(50); setFly(true); await wait((o.kind === "rocket" ? 0.6 : o.kind === "slip" ? 1.0 : 1.4) * 1000 + 100);
+    r.finish(o.dist === line ? "push" : (o.dist > line) === over, 2);
   }
   return (
     <div className="stack">
-      <div className="card stack" style={{ gap: 4 }}>
+      <div className="card stack" style={{ gap: 6 }}>
         <b>{t.emoji} {t.name} is about to throw</b>
-        <span className="muted">Usually throws around {t.avg} m. The line is <b>{line} m</b>.</span>
+        <span className="muted">Usually around {t.avg} m, but anything can happen. The line is <b>{line} m</b>.</span>
         <div aria-hidden="true" style={{ position: "relative", height: 34, background: "var(--surface2)", borderRadius: 99, overflow: "hidden" }}>
-          <span style={{ position: "absolute", left: `${(line / 60) * 100}%`, top: 0, bottom: 0, width: 2, background: "var(--ink)" }} />
-          <span style={{ position: "absolute", top: 4, left: fly && dist !== null ? `calc(${Math.min(97, (dist / 60) * 100)}% - 12px)` : 4, transition: fly ? "left 1.4s ease-out" : "none", fontSize: 22 }}>⚾</span>
+          <span style={{ position: "absolute", left: `${(line / THROW_MAX) * 100}%`, top: 0, bottom: 0, width: 2, background: "var(--ink)" }} />
+          <span style={{ position: "absolute", top: 4, left: fly && dist !== null ? `calc(${Math.min(96, (dist / THROW_MAX) * 100)}% - 12px)` : 4, transition: fly ? `left ${flight}s ${kind === "rocket" ? "cubic-bezier(.1,.8,.3,1)" : "ease-out"}` : "none", fontSize: 22 }}>{fly && kind === "rocket" ? "🚀" : "⚾"}</span>
         </div>
-        {dist !== null && !r.busy && <b>It landed at {dist} m.</b>}
+        {dist !== null && !r.busy && <b>{kind === "rocket" ? "Rocket throw! " : kind === "slip" ? "It slipped! " : ""}It landed at {dist} m.</b>}
       </div>
       <Stake coins={coins} stake={r.stake} setStake={r.setStake} disabled={r.busy} />
-      <span className="row" style={{ gap: 8 }}>
+      <span className="row" style={{ gap: 8, flexWrap: "wrap" }}>
         <button className="btn accent" disabled={r.busy || coins < 1} onClick={() => go(true)}>Over {line} m</button>
         <button className="btn accent" disabled={r.busy || coins < 1} onClick={() => go(false)}>Under {line} m</button>
         <button className="btn ghost sm" disabled={r.busy} onClick={() => { setI(Math.floor(Math.random() * THROWERS.length)); setDist(null); setFly(false); r.setMsg(null); }}>New thrower</button>
       </span>
-      <fieldset style={{ border: 0, padding: 0, margin: 0 }}><legend className="fine">Win and you double your coins.</legend></fieldset>
+      <span className="fine">Win and you double your coins.</span>
       <Result msg={r.msg} />
     </div>
   );
@@ -169,26 +172,27 @@ function Race({ coins, settle }: Ctx) {
 // ---------- 3. Higher or Lower ----------
 function HiLo({ coins, settle }: Ctx) {
   const r = useRound({ coins, settle });
-  const [n, setN] = useState(() => hiLoNext());
+  const [hist, setHist] = useState<number[]>(() => [hiLoStart()]);
   const [next, setNext] = useState<number | null>(null);
+  const n = hist[hist.length - 1];
   const m = hiLoMults(n);
   async function go(higher: boolean) {
     r.setBusy(true); r.setMsg(null);
-    let x = hiLoNext(); setNext(null);
+    const x = hiLoNext(n); setNext(null);
     await wait(700); setNext(x); await wait(700);
-    const mult = higher ? m.higher : m.lower;
-    r.finish(x === n ? "push" : (x > n) === higher, mult);
-    setN(x);
+    r.finish(x === n ? "push" : (x > n) === higher, higher ? m.higher : m.lower);
+    setHist((h) => [...h, x].slice(-7)); setNext(null);
   }
   return (
     <div className="stack">
       <div className="card" style={{ textAlign: "center" }}>
         <span className="eyebrow">Current number (1 to 100)</span>
         <b className="display" style={{ display: "block", fontSize: 56 }}>{n}</b>
-        <span className="muted">Next: {next === null ? (r.busy ? "…" : "?") : <b>{next}</b>}</span>
+        {hist.length > 1 && <span className="fine">Recent: {hist.slice(0, -1).join(" → ")}</span>}
+        <span className="muted" style={{ display: "block" }}>Next: {next === null ? (r.busy ? "…" : "?") : <b>{next}</b>}</span>
       </div>
       <Stake coins={coins} stake={r.stake} setStake={r.setStake} disabled={r.busy} />
-      <span className="row" style={{ gap: 8 }}>
+      <span className="row" style={{ gap: 8, flexWrap: "wrap" }}>
         <button className="btn accent" disabled={r.busy || coins < 1 || n === 100} onClick={() => go(true)}>Higher ×{m.higher}</button>
         <button className="btn accent" disabled={r.busy || coins < 1 || n === 1} onClick={() => go(false)}>Lower ×{m.lower}</button>
       </span>
@@ -202,26 +206,28 @@ function LagosTrip({ coins, settle }: Ctx) {
   const r = useRound({ coins, settle });
   const [trip, setTrip] = useState<Trip>(() => newTrip());
   const [mins, setMins] = useState<number | null>(null);
-  async function go(more: boolean) {
+  const mult = tripMults(trip), { lo, hi } = tripLimits(trip);
+  async function go(pick: TripBucket) {
     r.setBusy(true); r.setMsg(null); setMins(null);
     const m = tripMinutes(trip); await wait(1200); setMins(m);
-    r.finish(m === trip.line ? "push" : (m > trip.line) === more, 2);
-    await wait(1600); setTrip(newTrip()); setMins(null);
+    r.finish(tripBucket(trip, m) === pick, mult[pick]);
+    await wait(1800); setTrip(newTrip()); setMins(null);
   }
+  const range: Record<TripBucket, string> = { quick: `under ${lo} min`, normal: `${lo} to ${hi} min`, stuck: `over ${hi} min` };
   return (
     <div className="stack">
       <div className="card stack" style={{ gap: 4 }}>
         <b>🚗 {trip.route.name}</b>
-        <span className="muted">Conditions: {trip.cond.label}. Usual trip: {trip.route.mins} min.</span>
-        <span>Line: <b>{trip.line} min</b></span>
+        <span className="muted">Conditions: {trip.cond.label}. Usual trip: {trip.route.mins} min. Anything can happen on the road.</span>
         {mins !== null && <b>The trip took {mins} min.</b>}
       </div>
       <Stake coins={coins} stake={r.stake} setStake={r.setStake} disabled={r.busy} />
-      <span className="row" style={{ gap: 8 }}>
-        <button className="btn accent" disabled={r.busy || coins < 1} onClick={() => go(true)}>More than {trip.line} min</button>
-        <button className="btn accent" disabled={r.busy || coins < 1} onClick={() => go(false)}>Less than {trip.line} min</button>
+      <span className="eyebrow">How long will it take?</span>
+      <span className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+        {TRIP_BUCKETS.map((b) => (
+          <button key={b.id} className="btn accent" disabled={r.busy || coins < 1} onClick={() => go(b.id)}>{b.label} ×{mult[b.id]}<br /><span className="fine" style={{ color: "inherit" }}>{range[b.id]}</span></button>
+        ))}
       </span>
-      <span className="fine">Win and you double your coins.</span>
       <Result msg={r.msg} />
     </div>
   );
@@ -267,6 +273,8 @@ export default function Arcade({ wallet, setWallet, onDone }: { wallet: Wallet; 
   const [game, setGame] = useState<GameId | null>(null);
   const [rounds, setRounds] = useState(0);
   const [rating, setRating] = useState(false);
+  const [seen, setSeen] = useState(0); // the round count at which the reminder was last closed
+  const nudge = rounds > 0 && rounds % NUDGE_AT === 0 && seen !== rounds;
   const settle = useCallback((delta: number) => { setWallet((w) => ({ ...w, coins: Math.max(0, w.coins + delta) })); setRounds((n) => n + 1); }, [setWallet]);
   const coins = wallet.coins;
 
@@ -290,16 +298,15 @@ export default function Arcade({ wallet, setWallet, onDone }: { wallet: Wallet; 
         <b className="display" style={{ fontSize: 26 }} aria-label={`${coins} coins`}>🪙 {coins}</b>
         <span className="fine">+10 every day · +30 for each day without a bet</span>
       </div>
-      {rounds >= NUDGE_AT && (
-        <div className="card stack" role="status">
-          <b>That&rsquo;s {rounds} rounds.</b>
-          <span className="muted">Take a moment. How is the urge? You can stop whenever you like.</span>
-          <span className="row" style={{ gap: 8, flexWrap: "wrap" }}>
-            <button className="btn primary sm" onClick={() => setRating(true)}>I&rsquo;m done for now</button>
-            <Link className="btn soft sm" href="/groups">Talk to a group</Link>
-            <button className="btn ghost sm" onClick={() => { window.location.hash = "breathe"; }}>Breathe</button>
-          </span>
-        </div>
+      {nudge && (
+        <Sheet center onClose={() => setSeen(rounds)}>
+          <h3 className="display">That&rsquo;s {rounds} rounds</h3>
+          <p>Take a moment. How is the urge? You can stop whenever you like.</p>
+          <button className="btn primary" onClick={() => { setSeen(rounds); setRating(true); }}>I&rsquo;m done for now</button>
+          <Link className="btn soft" href="/groups">Talk to a group</Link>
+          <button className="btn soft" onClick={() => { window.location.hash = "breathe"; }}>Breathe</button>
+          <button className="btn ghost" onClick={() => setSeen(rounds)}>Keep playing</button>
+        </Sheet>
       )}
       {coins < 1 && (
         <div className="card stack" role="status">
@@ -324,6 +331,7 @@ export default function Arcade({ wallet, setWallet, onDone }: { wallet: Wallet; 
         <>
           <button className="btn ghost sm" onClick={() => setGame(null)}>← All games</button>
           <h2 className="display">{GAMES.find((g) => g.id === game)?.name}</h2>
+          <p className="card fine" style={{ margin: 0 }}><span><b>How to play:</b> {GAMES.find((g) => g.id === game)?.how}</span></p>
           {game === "throw" && <BallThrow coins={coins} settle={settle} />}
           {game === "race" && <Race coins={coins} settle={settle} />}
           {game === "hilo" && <HiLo coins={coins} settle={settle} />}

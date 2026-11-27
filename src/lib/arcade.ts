@@ -31,6 +31,9 @@ export const pick = <T,>(a: readonly T[], r: Rng = Math.random) => a[Math.floor(
 /** A roughly bell-shaped random number around 0 (sum of three uniforms). */
 const bell = (r: Rng) => (r() + r() + r() - 1.5) * 2;
 
+/** A small fixed-seed generator, so prices worked out by simulation are the same every time they are shown. */
+const seeded = (seed: number): Rng => () => { seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+
 /** What a winning bet pays: stake x multiplier, rounded, at least +1. Returns the coins gained (not including the stake back). */
 export const winnings = (stake: number, mult: number) => Math.max(1, Math.round(stake * (mult - 1)));
 /** Multiplier for an outcome with probability p: a fair price with a little taken off, shown to one decimal, between 1.2 and 10. */
@@ -44,6 +47,15 @@ export const THROWERS = [
   { name: "Tunde", emoji: "🧑🏾‍🦱", avg: 27, spread: 6 },
 ] as const;
 export type Thrower = (typeof THROWERS)[number];
+export const THROW_MAX = 70; // metres at the end of the bar
+export type ThrowKind = "normal" | "rocket" | "slip";
+/** Mostly a normal throw, but now and then a rocket (far past the line) or a slip (well short). Both are equally likely, so Over and Under stay fair. */
+export function throwOutcome(t: Thrower, r: Rng = Math.random): { dist: number; kind: ThrowKind } {
+  const x = r();
+  if (x < 0.1) return { dist: Math.min(THROW_MAX - 2, Math.round(t.avg * (1.35 + r() * 0.45) * 10) / 10), kind: "rocket" };
+  if (x < 0.2) return { dist: Math.round((5 + r() * t.avg * 0.4) * 10) / 10, kind: "slip" };
+  return { dist: throwDistance(t, r), kind: "normal" };
+}
 export const throwDistance = (t: Thrower, r: Rng = Math.random) => Math.max(5, Math.round((t.avg + bell(r) * t.spread) * 10) / 10);
 /** Your own throw: stop the moving bar near the middle for the best distance. */
 export const selfThrow = (power: number) => Math.round((8 + 52 * (1 - Math.abs(power - 0.5) * 2)) * 10) / 10; // power 0..1
@@ -72,8 +84,22 @@ export function raceMults(): number[] {
 }
 
 // ---------- 3. Higher or Lower ----------
-export const hiLoMults = (n: number) => ({ higher: multFor((100 - n) / 99), lower: multFor((n - 1) / 99) });
-export const hiLoNext = (r: Rng = Math.random) => 1 + Math.floor(r() * 100);
+// The number drifts a little each round, with now and then a big jump, so it can't be read from the number alone.
+export const hiLoNext = (n: number, r: Rng = Math.random) => {
+  let x = Math.round(n + bell(r) * 14 + (r() < 0.12 ? (r() < 0.5 ? -1 : 1) * (20 + r() * 25) : 0));
+  if (x > 100) x = 200 - x; if (x < 1) x = 2 - x;
+  return clamp(x, 1, 100);
+};
+export const hiLoStart = (r: Rng = Math.random) => 15 + Math.floor(r() * 71);
+const hiLoCache = new Map<number, { higher: number; lower: number }>();
+/** Prices from the real chances of the next number being higher or lower (worked out by simulation). */
+export function hiLoMults(n: number) {
+  const hit = hiLoCache.get(n); if (hit) return hit;
+  const r = seeded(n * 97 + 5), N = 2000; let up = 0, down = 0;
+  for (let i = 0; i < N; i++) { const x = hiLoNext(n, r); if (x > n) up++; else if (x < n) down++; }
+  const m = { higher: multFor(up / N), lower: multFor(down / N) };
+  hiLoCache.set(n, m); return m;
+}
 
 // ---------- 4. Lagos Trip ----------
 export const ROUTES = [
@@ -89,7 +115,21 @@ export const newTrip = (r: Rng = Math.random): Trip => {
   const route = pick(ROUTES, r), cond = pick(CONDITIONS, r);
   return { route, cond, line: Math.round((route.mins * cond.factor) / 5) * 5 };
 };
-export const tripMinutes = (t: Trip, r: Rng = Math.random) => Math.max(10, Math.round(t.line + bell(r) * t.line * 0.18));
+/** The trip you can't plan for: now and then an accident (much slower) or a shortcut (much faster). */
+export const tripMinutes = (t: Trip, r: Rng = Math.random) => {
+  const e = r(), f = e < 0.12 ? 1.5 : e < 0.22 ? 0.7 : 1;
+  return Math.max(10, Math.round((t.line + bell(r) * t.line * 0.18) * f));
+};
+export type TripBucket = "quick" | "normal" | "stuck";
+export const TRIP_BUCKETS: { id: TripBucket; label: string }[] = [{ id: "quick", label: "Quick" }, { id: "normal", label: "About right" }, { id: "stuck", label: "Stuck" }];
+export const tripLimits = (t: Trip) => ({ lo: Math.round((t.line * 0.85) / 5) * 5, hi: Math.round((t.line * 1.15) / 5) * 5 });
+export const tripBucket = (t: Trip, mins: number): TripBucket => { const { lo, hi } = tripLimits(t); return mins < lo ? "quick" : mins > hi ? "stuck" : "normal"; };
+/** Prices for the three outcomes, from simulating this trip many times. */
+export function tripMults(t: Trip): Record<TripBucket, number> {
+  const r = seeded(t.line * 31 + t.route.mins), N = 2000, c = { quick: 0, normal: 0, stuck: 0 };
+  for (let i = 0; i < N; i++) c[tripBucket(t, tripMinutes(t, r))]++;
+  return { quick: multFor(c.quick / N), normal: multFor(c.normal / N), stuck: multFor(c.stuck / N) };
+}
 
 // ---------- 5. Tug of War ----------
 export const FIGHTERS = [
