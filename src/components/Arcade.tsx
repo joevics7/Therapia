@@ -3,16 +3,17 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Sheet } from "@/components/ui";
 import {
-  FIGHTERS, MAX_STAKE, RACERS, THROWERS, THROW_MAX, TRIP_BUCKETS, type ThrowKind, type Trip, type TripBucket, type Wallet,
-  hiLoMults, hiLoNext, hiLoStart, multFor, newMatch, newTrip, raceMults, raceStep, selfThrow, throwOutcome, tripBucket, tripLimits, tripMinutes, tripMults, tugChance, tugWinner, winnings,
+  FIGHTERS, MAX_STAKE, RACERS, THROWERS, THROW_MAX, TRIP_BUCKETS, type ThrowLevel, type Trip, type TripBucket, type Wallet,
+  CARD_COUNT, cardMult, dealCards, hiLoMults, hiLoNext, hiLoStart, multFor, newMatch, newTrip, raceMults, raceStep, selfThrow, throwOutcome, tripBucket, tripLimits, tripMinutes, tripMults, tugChance, tugWinner, winnings,
 } from "@/lib/arcade";
 
-type GameId = "throw" | "race" | "hilo" | "trip" | "tug";
+type GameId = "throw" | "race" | "hilo" | "trip" | "tug" | "cards";
 const GAMES: { id: GameId; name: string; emoji: string; blurb: string; how: string }[] = [
-  { id: "throw", name: "Ball Throw", emoji: "⚾", blurb: "Bet on how far the ball goes, or throw it yourself.", how: "Pick Over or Under the line, then watch the throw (watch out for rockets and slips): a right call doubles your coins." },
+  { id: "throw", name: "Ball Throw", emoji: "⚾", blurb: "Bet on how far the ball goes, or throw it yourself.", how: "Pick Over or Under the line, then watch the throw: its speed (Slow to Lightning) is a surprise every time, and a right call doubles your coins." },
   { id: "race", name: "Danfo Race", emoji: "🚌", blurb: "Pick the winner of a street race.", how: "Pick the vehicle you think will win: a win pays the number next to it, so the longer shot pays more." },
   { id: "hilo", name: "Higher or Lower", emoji: "🔢", blurb: "Read the trend: will the next number go up or down?", how: "Study the last numbers, then guess if the next one goes Higher or Lower; big jumps can happen, and the harder call pays more." },
   { id: "trip", name: "Lagos Trip", emoji: "🚗", blurb: "How long will the trip really take?", how: "Guess if the trip will be Quick, About right or Stuck: the less likely the result, the more it pays, and accidents or shortcuts can happen." },
+  { id: "cards", name: "Pick the Card", emoji: "🃏", blurb: "Five cards face down. Find the Ace.", how: `Five cards are face down and one is the Ace of Hearts: tap the one you think it is, and a right pick pays ×${cardMult}.` },
   { id: "tug", name: "Tug of War", emoji: "🪢", blurb: "Back the stronger puller.", how: "Back the fighter you think will win the rope: the weaker one wins less often but pays more." },
 ];
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -70,32 +71,36 @@ function ThrowBet({ coins, settle }: { coins: number; settle: (d: number) => voi
   const r = useRound({ coins, settle });
   const [i, setI] = useState(() => Math.floor(Math.random() * THROWERS.length));
   const [dist, setDist] = useState<number | null>(null);
-  const [kind, setKind] = useState<ThrowKind>("normal");
+  const [level, setLevel] = useState<ThrowLevel | null>(null);
   const [fly, setFly] = useState(false);
   const t = THROWERS[i], line = Math.round(t.avg);
-  const flight = kind === "rocket" ? 0.6 : kind === "slip" ? 1.0 : 1.4; // seconds: rockets really are faster
   async function go(over: boolean) {
     r.setBusy(true); r.setMsg(null);
-    const o = throwOutcome(t); setDist(o.dist); setKind(o.kind); setFly(false);
-    await wait(50); setFly(true); await wait((o.kind === "rocket" ? 0.6 : o.kind === "slip" ? 1.0 : 1.4) * 1000 + 100);
+    const o = throwOutcome(t); setDist(o.dist); setLevel(o.level); setFly(false);
+    await wait(50); setFly(true); await wait(o.level.secs * 1000 + 150);
     r.finish(o.dist === line ? "push" : (o.dist > line) === over, 2);
   }
   return (
     <div className="stack">
       <div className="card stack" style={{ gap: 6 }}>
         <b>{t.emoji} {t.name} is about to throw</b>
-        <span className="muted">Usually around {t.avg} m, but anything can happen. The line is <b>{line} m</b>.</span>
+        <span className="muted">Usually around {t.avg} m, but every throw comes at a different speed. The line is <b>{line} m</b>.</span>
         <div aria-hidden="true" style={{ position: "relative", height: 34, background: "var(--surface2)", borderRadius: 99, overflow: "hidden" }}>
           <span style={{ position: "absolute", left: `${(line / THROW_MAX) * 100}%`, top: 0, bottom: 0, width: 2, background: "var(--ink)" }} />
-          <span style={{ position: "absolute", top: 4, left: fly && dist !== null ? `calc(${Math.min(96, (dist / THROW_MAX) * 100)}% - 12px)` : 4, transition: fly ? `left ${flight}s ${kind === "rocket" ? "cubic-bezier(.1,.8,.3,1)" : "ease-out"}` : "none", fontSize: 22 }}>{fly && kind === "rocket" ? "🚀" : "⚾"}</span>
+          <span style={{ position: "absolute", top: 4, left: fly && dist !== null ? `calc(${Math.min(96, (dist / THROW_MAX) * 100)}% - 12px)` : 4, transition: fly && level ? `left ${level.secs}s ease-out` : "none", fontSize: 22 }}>{fly && level?.level === 5 ? "🚀" : "⚾"}</span>
         </div>
-        {dist !== null && !r.busy && <b>{kind === "rocket" ? "Rocket throw! " : kind === "slip" ? "It slipped! " : ""}It landed at {dist} m.</b>}
+        <span className="row" style={{ gap: 4 }} aria-label={level && (fly || r.busy || dist !== null) ? `Speed level ${level.level} of 5, ${level.name}` : "Speed not known yet"}>
+          <span className="fine">Speed:</span>
+          {[1, 2, 3, 4, 5].map((n) => <span key={n} aria-hidden="true" style={{ width: 22, height: 8, borderRadius: 4, background: level && dist !== null && n <= level.level ? "var(--ink)" : "var(--surface2)" }} />)}
+          <span className="fine">{level && dist !== null ? `${level.level}/5 ${level.name}` : "a surprise"}</span>
+        </span>
+        {dist !== null && !r.busy && <b>It landed at {dist} m.</b>}
       </div>
       <Stake coins={coins} stake={r.stake} setStake={r.setStake} disabled={r.busy} />
       <span className="row" style={{ gap: 8, flexWrap: "wrap" }}>
         <button className="btn accent" disabled={r.busy || coins < 1} onClick={() => go(true)}>Over {line} m</button>
         <button className="btn accent" disabled={r.busy || coins < 1} onClick={() => go(false)}>Under {line} m</button>
-        <button className="btn ghost sm" disabled={r.busy} onClick={() => { setI(Math.floor(Math.random() * THROWERS.length)); setDist(null); setFly(false); r.setMsg(null); }}>New thrower</button>
+        <button className="btn ghost sm" disabled={r.busy} onClick={() => { setI(Math.floor(Math.random() * THROWERS.length)); setDist(null); setLevel(null); setFly(false); r.setMsg(null); }}>New thrower</button>
       </span>
       <span className="fine">Win and you double your coins.</span>
       <Result msg={r.msg} />
@@ -233,6 +238,45 @@ function LagosTrip({ coins, settle }: Ctx) {
   );
 }
 
+// ---------- 6. Pick the Card ----------
+function Cards({ coins, settle }: Ctx) {
+  const r = useRound({ coins, settle });
+  const [deal, setDeal] = useState(() => dealCards());
+  const [shown, setShown] = useState(false);
+  const [chosen, setChosen] = useState<number | null>(null);
+  async function go(i: number) {
+    r.setBusy(true); r.setMsg(null); setChosen(i);
+    await wait(500); setShown(true);
+    r.finish(i === deal.ace, cardMult);
+    await wait(2200); setShown(false); setChosen(null); setDeal(dealCards());
+  }
+  return (
+    <div className="stack">
+      <div className="card stack">
+        <span className="muted">One of these five cards is the <b>Ace of Hearts</b>. Which one?</span>
+        <div className="row" style={{ gap: 6, justifyContent: "space-between" }}>
+          {Array.from({ length: CARD_COUNT }, (_, i) => {
+            const up = shown, ace = up && i === deal.ace;
+            return (
+              <button key={i} type="button" aria-label={up ? `Card ${i + 1}: ${deal.faces[i]}` : `Card ${i + 1}, face down`} disabled={r.busy || shown || coins < 1} onClick={() => go(i)}
+                style={{ flex: "1 1 0", aspectRatio: "2 / 3", maxWidth: 64, borderRadius: 10, fontWeight: 800, fontSize: 20, cursor: "pointer", transition: "transform .25s",
+                  transform: chosen === i ? "translateY(-8px)" : "none",
+                  border: ace ? "3px solid var(--green)" : chosen === i ? "3px solid var(--ink)" : "1px solid var(--line)",
+                  background: up ? "var(--surface)" : "repeating-linear-gradient(45deg, var(--ink) 0 6px, color-mix(in srgb, var(--ink) 80%, white) 6px 12px)",
+                  color: up && /[♥♦]/.test(deal.faces[i]) ? "#c0392b" : "var(--ink)" }}>
+                {up ? deal.faces[i] : ""}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      <Stake coins={coins} stake={r.stake} setStake={r.setStake} disabled={r.busy} />
+      <span className="fine">Tap a card to pick it. A right pick pays ×{cardMult}.</span>
+      <Result msg={r.msg} />
+    </div>
+  );
+}
+
 // ---------- 5. Tug of War ----------
 function Tug({ coins, settle }: Ctx) {
   const r = useRound({ coins, settle });
@@ -337,6 +381,7 @@ export default function Arcade({ wallet, setWallet, onDone }: { wallet: Wallet; 
           {game === "hilo" && <HiLo coins={coins} settle={settle} />}
           {game === "trip" && <LagosTrip coins={coins} settle={settle} />}
           {game === "tug" && <Tug coins={coins} settle={settle} />}
+          {game === "cards" && <Cards coins={coins} settle={settle} />}
         </>
       )}
       <button className="btn primary" onClick={() => setRating(true)}>I&rsquo;m done. Take me back</button>

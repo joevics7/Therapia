@@ -48,13 +48,19 @@ export const THROWERS = [
 ] as const;
 export type Thrower = (typeof THROWERS)[number];
 export const THROW_MAX = 70; // metres at the end of the bar
-export type ThrowKind = "normal" | "rocket" | "slip";
-/** Mostly a normal throw, but now and then a rocket (far past the line) or a slip (well short). Both are equally likely, so Over and Under stay fair. */
-export function throwOutcome(t: Thrower, r: Rng = Math.random): { dist: number; kind: ThrowKind } {
-  const x = r();
-  if (x < 0.1) return { dist: Math.min(THROW_MAX - 2, Math.round(t.avg * (1.35 + r() * 0.45) * 10) / 10), kind: "rocket" };
-  if (x < 0.2) return { dist: Math.round((5 + r() * t.avg * 0.4) * 10) / 10, kind: "slip" };
-  return { dist: throwDistance(t, r), kind: "normal" };
+/** Each throw comes at one of five speeds, picked at random. The speed changes how far it goes. The factors average to 1, so Over and Under stay even. */
+export const THROW_LEVELS = [
+  { level: 1, name: "Slow", factor: 0.65, secs: 1.9 },
+  { level: 2, name: "Easy", factor: 0.82, secs: 1.5 },
+  { level: 3, name: "Steady", factor: 1, secs: 1.2 },
+  { level: 4, name: "Fast", factor: 1.18, secs: 0.9 },
+  { level: 5, name: "Lightning", factor: 1.35, secs: 0.6 },
+] as const;
+export type ThrowLevel = (typeof THROW_LEVELS)[number];
+export function throwOutcome(t: Thrower, r: Rng = Math.random): { dist: number; level: ThrowLevel } {
+  const level = pick(THROW_LEVELS, r);
+  const d = Math.round((t.avg * level.factor + bell(r) * t.spread) * 10) / 10;
+  return { dist: clamp(d, 5, THROW_MAX - 2), level };
 }
 export const throwDistance = (t: Thrower, r: Rng = Math.random) => Math.max(5, Math.round((t.avg + bell(r) * t.spread) * 10) / 10);
 /** Your own throw: stop the moving bar near the middle for the best distance. */
@@ -144,3 +150,15 @@ export const newMatch = (r: Rng = Math.random) => {
 /** Chance that fighter A wins: ratio of their powers (squared, so a stronger rope-puller is clearly favoured). */
 export const tugChance = (a: number, b: number) => { const x = FIGHTERS[a].power ** 2, y = FIGHTERS[b].power ** 2; return x / (x + y); };
 export const tugWinner = (a: number, b: number, r: Rng = Math.random) => (r() < tugChance(a, b) ? 0 : 1);
+
+// ---------- 6. Pick the Card ----------
+export const CARD_COUNT = 5;
+export const CARD_FACES = ["2♣", "9♦", "K♠", "5♥", "J♣", "7♦"] as const;
+/** Five cards face down, one is the Ace. Picking it right has a 1 in 5 chance. */
+export const cardMult = multFor(1 / CARD_COUNT);
+export const dealCards = (r: Rng = Math.random) => {
+  const ace = Math.floor(r() * CARD_COUNT);
+  const decoys = [...CARD_FACES].sort(() => r() - 0.5);
+  let d = 0;
+  return { ace, faces: Array.from({ length: CARD_COUNT }, (_, i) => (i === ace ? "A♥" : decoys[d++])) };
+};
